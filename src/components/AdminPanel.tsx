@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { 
   TrendingUp, Coins, Users, ShoppingBag, Plus, Trash2, Edit, Check, Eye, X, 
-  RotateCw, AlertCircle, ShieldAlert, Sparkles, CheckCircle2, Truck, Ban, CheckCheck 
+  RotateCw, AlertCircle, ShieldAlert, Sparkles, CheckCircle2, Truck, Ban, CheckCheck,
+  FolderOpen, MessageSquare
 } from 'lucide-react';
 import { 
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
 } from 'recharts';
-import { Product, Order, ChatSession, User as AppUser, AdminStats, Category } from '../types';
+import { Product, Order, ChatSession, User as AppUser, AdminStats, Category, ChatMessage } from '../types';
+import PharmacistChat from './PharmacistChat';
 
 interface AdminPanelProps {
   products: Product[];
@@ -17,6 +19,12 @@ interface AdminPanelProps {
   onUpdateProduct: (product: Product) => void;
   onDeleteProduct: (id: string) => void;
   onUpdateOrderStatus: (orderId: string, status: Order['status']) => void;
+  currentUser: AppUser;
+  chats: ChatSession[];
+  messages: ChatMessage[];
+  onSendMessage: (text: string, attachProdId?: string) => Promise<void>;
+  onSendPharmacistPrescription: (chatId: string, productId: string) => Promise<void>;
+  onAddToCart: (product: Product) => void;
 }
 
 export default function AdminPanel({
@@ -27,9 +35,15 @@ export default function AdminPanel({
   onAddProduct,
   onUpdateProduct,
   onDeleteProduct,
-  onUpdateOrderStatus
+  onUpdateOrderStatus,
+  currentUser,
+  chats,
+  messages,
+  onSendMessage,
+  onSendPharmacistPrescription,
+  onAddToCart
 }: AdminPanelProps) {
-  const [adminTab, setAdminTab] = useState<'stats' | 'orders' | 'products' | 'promos'>('stats');
+  const [adminTab, setAdminTab] = useState<'stats' | 'orders' | 'products' | 'promos' | 'categories' | 'messages'>('stats');
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(true);
 
@@ -50,6 +64,65 @@ export default function AdminPanel({
   // Create or update promotion form state
   const [promoProductId, setPromoProductId] = useState('');
   const [promoPercentage, setPromoPercentage] = useState(15);
+
+  // New category form states
+  const [catNameInput, setCatNameInput] = useState('');
+  const [catSlugInput, setCatSlugInput] = useState('');
+  const [catDescInput, setCatDescInput] = useState('');
+  const [catError, setCatError] = useState('');
+  const [catSuccess, setCatSuccess] = useState('');
+
+  const handleAddCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCatError('');
+    setCatSuccess('');
+    if (!catNameInput || !catSlugInput) {
+      setCatError('Le nom et le slug de la catégorie sont requis.');
+      return;
+    }
+    try {
+      const res = await fetch('/api/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug: catSlugInput.toLowerCase().trim().replace(/\s+/g, '-'),
+          name: catNameInput.trim(),
+          description: catDescInput.trim(),
+          icon: 'Sparkles'
+        })
+      });
+      if (res.ok) {
+        setCatSuccess('Catégorie ajoutée avec succès !');
+        setCatNameInput('');
+        setCatSlugInput('');
+        setCatDescInput('');
+      } else {
+        const data = await res.json();
+        setCatError(data.error || 'Erreur lors de la création');
+      }
+    } catch {
+      setCatError('Une erreur réseau est survenue.');
+    }
+  };
+
+  const handleDeleteCategory = async (slug: string) => {
+    if (!window.confirm('Voulez-vous vraiment supprimer cette catégorie ?')) return;
+    setCatError('');
+    setCatSuccess('');
+    try {
+      const res = await fetch(`/api/categories/${slug}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        setCatSuccess('Catégorie supprimée avec succès !');
+      } else {
+        const data = await res.json();
+        setCatError(data.error || 'Erreur lors de la suppression');
+      }
+    } catch {
+      setCatError('Une erreur réseau est survenue.');
+    }
+  };
 
   const fetchStats = async () => {
     setLoadingStats(true);
@@ -170,7 +243,7 @@ export default function AdminPanel({
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setAdminTab('stats')}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer ${
                 adminTab === 'stats' ? 'bg-zinc-900 text-white shadow-sm' : 'bg-white hover:bg-zinc-50 text-zinc-700'
               }`}
             >
@@ -179,7 +252,7 @@ export default function AdminPanel({
             </button>
             <button
               onClick={() => setAdminTab('orders')}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer ${
                 adminTab === 'orders' ? 'bg-zinc-900 text-white shadow-sm' : 'bg-white hover:bg-zinc-50 text-zinc-700'
               }`}
             >
@@ -188,7 +261,7 @@ export default function AdminPanel({
             </button>
             <button
               onClick={() => setAdminTab('products')}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer ${
                 adminTab === 'products' ? 'bg-zinc-900 text-white shadow-sm' : 'bg-white hover:bg-zinc-50 text-zinc-700'
               }`}
             >
@@ -196,12 +269,30 @@ export default function AdminPanel({
               <span>Articles ({products.length})</span>
             </button>
             <button
+              onClick={() => setAdminTab('categories')}
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer ${
+                adminTab === 'categories' ? 'bg-zinc-900 text-white shadow-sm' : 'bg-white hover:bg-zinc-50 text-zinc-700'
+              }`}
+            >
+              <FolderOpen className="h-4 w-4" />
+              <span>Catégories ({categories.length})</span>
+            </button>
+            <button
               onClick={() => setAdminTab('promos')}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer ${
                 adminTab === 'promos' ? 'bg-zinc-900 text-white shadow-sm' : 'bg-white hover:bg-zinc-50 text-zinc-700'
               }`}
             >
               <span>Promos & Réductions</span>
+            </button>
+            <button
+              onClick={() => setAdminTab('messages')}
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer ${
+                adminTab === 'messages' ? 'bg-zinc-900 text-white shadow-sm' : 'bg-white hover:bg-zinc-50 text-zinc-700'
+              }`}
+            >
+              <MessageSquare className="h-4 w-4" />
+              <span>Messages / Chats ({chats.length})</span>
             </button>
           </div>
         </div>
@@ -609,10 +700,11 @@ export default function AdminPanel({
 
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-zinc-700 font-bold mb-1">Marque *</label>
+                          <label className="block text-zinc-700 font-bold mb-1">Marque & Informations complémentaires *</label>
                           <input
                             type="text"
                             required
+                            placeholder="ex: Gamme Naturelle de Côte d'Ivoire"
                             value={prodBrand}
                             onChange={(e) => setProdBrand(e.target.value)}
                             className="w-full p-3 bg-zinc-50 border border-zinc-200 rounded-xl"
@@ -742,6 +834,151 @@ export default function AdminPanel({
                   );
                 })}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* ==================================== */}
+        {/* TAB 6: MANAGING CATEGORIES         */}
+        {/* ==================================== */}
+        {adminTab === 'categories' && (
+          <div className="space-y-6 animate-fade-in text-xs font-sans">
+            {/* Create Category Form */}
+            <div className="bg-white rounded-3xl p-6 border border-rose-100 shadow-sm">
+              <h3 className="font-extrabold text-rose-950 text-sm mb-1">Ajouter une Nouvelle Catégorie d'Étalage</h3>
+              <p className="text-zinc-500 mb-4">Créez des étagères virtuelles pour ranger et segmenter vos articles cosmétiques.</p>
+
+              {catError && (
+                <div className="p-4 mb-4 rounded-xl bg-red-50 text-red-700 font-medium flex items-center space-x-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>{catError}</span>
+                </div>
+              )}
+
+              {catSuccess && (
+                <div className="p-4 mb-4 rounded-xl bg-emerald-50 text-emerald-800 font-medium flex items-center space-x-2">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>{catSuccess}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleAddCategory} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div>
+                  <label className="block text-zinc-700 font-bold mb-1.5">Nom de la catégorie *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="ex: Soins Capillaires"
+                    value={catNameInput}
+                    onChange={(e) => {
+                      setCatNameInput(e.target.value);
+                      // Automatic slug suggestion
+                      if (!catSlugInput) {
+                        setCatSlugInput(e.target.value.toLowerCase()
+                          .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove accents
+                          .replace(/[^a-z0-9 ]/g, '') // remove special chars
+                          .trim().replace(/\s+/g, '-'));
+                      }
+                    }}
+                    className="w-full p-3 bg-zinc-50 border border-zinc-200 rounded-xl"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-zinc-700 font-bold mb-1.5">Slug (Identifiant d'URL unique) *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="ex: soins-capillaires"
+                    value={catSlugInput}
+                    onChange={(e) => setCatSlugInput(e.target.value.toLowerCase().trim().replace(/[^a-z0-9-]/g, ''))}
+                    className="w-full p-3 bg-zinc-50 border border-zinc-200 rounded-xl font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-zinc-700 font-bold mb-1.5">Description optionnelle</label>
+                  <input
+                    type="text"
+                    placeholder="ex: Gamme d'huiles et shampoings"
+                    value={catDescInput}
+                    onChange={(e) => setCatDescInput(e.target.value)}
+                    className="w-full p-3 bg-zinc-50 border border-zinc-200 rounded-xl"
+                  />
+                </div>
+
+                <div className="md:col-span-3 flex justify-end">
+                  <button
+                    type="submit"
+                    className="px-6 py-3 bg-rose-950 hover:bg-rose-900 text-white font-bold rounded-xl flex items-center space-x-2 shadow-sm"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Créer la catégorie</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* List Existing Categories */}
+            <div className="bg-white rounded-3xl p-6 border border-rose-100 shadow-sm">
+              <h3 className="font-extrabold text-rose-950 text-sm mb-4">Catégories Enregistrées dans la Boutique</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {categories.map((cat) => {
+                  const productCount = products.filter(p => p.category === cat.slug).length;
+                  return (
+                    <div key={cat.slug} className="p-5 rounded-2xl bg-zinc-55 border border-zinc-150 relative transition hover:shadow-xs group flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center space-x-3 mb-2.5">
+                          <div className="p-2.5 bg-rose-50 rounded-xl text-rose-600">
+                            <FolderOpen className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <h4 className="font-extrabold text-zinc-900 text-sm leading-tight">{cat.name}</h4>
+                            <p className="font-mono text-[9px] text-rose-500 font-semibold">{cat.slug}</p>
+                          </div>
+                        </div>
+                        <p className="text-zinc-500 leading-relaxed min-h-[36px]">{cat.description || "Aucune description renseignée."}</p>
+                      </div>
+
+                      <div className="mt-4 pt-3.5 border-t border-zinc-100 flex items-center justify-between">
+                        <span className="px-2.5 py-1 rounded bg-zinc-100 text-zinc-600 font-extrabold text-[10px]">{productCount} article{productCount > 1 ? 's' : ''}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteCategory(cat.slug)}
+                          className="text-zinc-400 hover:text-red-600 p-1 rounded-lg transition"
+                          title="Supprimer la catégorie"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ==================================== */}
+        {/* TAB 7: MESSAGING CHAT FOR ADMIN    */}
+        {/* ==================================== */}
+        {adminTab === 'messages' && (
+          <div className="bg-white rounded-3xl p-6 border border-rose-100 shadow-sm animate-fade-in">
+            <div className="mb-4">
+              <h3 className="font-extrabold text-rose-950 text-sm mb-1">Messagerie Clientèle Directe</h3>
+              <p className="text-zinc-400 text-xs">Suivez, lisez et répondez aux rituels d'échange et questions de diagnostic reçus en temps réel.</p>
+            </div>
+            <div className="border border-zinc-100 rounded-3xl overflow-hidden min-h-[500px]">
+              <PharmacistChat
+                currentUser={currentUser}
+                products={products}
+                currentProfile={currentUser.skinProfile}
+                chats={chats}
+                messages={messages}
+                onSendMessage={onSendMessage}
+                onSendPharmacistPrescription={onSendPharmacistPrescription}
+                onAddToCart={onAddToCart}
+              />
             </div>
           </div>
         )}

@@ -10,6 +10,8 @@ interface HeaderProps {
   onOpenCart: () => void;
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  adminViewMode?: 'admin' | 'client';
+  setAdminViewMode?: (mode: 'admin' | 'client') => void;
 }
 
 export default function Header({
@@ -19,7 +21,9 @@ export default function Header({
   onLogout,
   onOpenCart,
   activeTab,
-  setActiveTab
+  setActiveTab,
+  adminViewMode = 'admin',
+  setAdminViewMode
 }: HeaderProps) {
   return (
     <header id="app-header" className="sticky top-0 z-40 bg-white border-b border-rose-100 shadow-sm font-sans">
@@ -41,7 +45,7 @@ export default function Header({
           {/* Logo / Title */}
           <div 
             onClick={() => {
-              if (currentUser.role === 'client') {
+              if (currentUser.role === 'client' || adminViewMode === 'client') {
                 setActiveTab('catalog');
               }
             }} 
@@ -59,8 +63,17 @@ export default function Header({
           </div>
 
           {/* Navigation Links for Client vs Admin */}
-          {currentUser.role === 'client' ? (
-            <nav className="hidden md:flex space-x-1 lg:space-x-2">
+          {(currentUser.role === 'client' || adminViewMode === 'client') ? (
+            <nav className="hidden md:flex space-x-1 lg:space-x-2 items-center">
+              {currentUser.role === 'admin' && (
+                <button
+                  onClick={() => setAdminViewMode?.('admin')}
+                  className="px-3.5 py-1.5 rounded-full text-xs font-black bg-zinc-950 hover:bg-zinc-900 text-white flex items-center space-x-1 shadow-xs border border-zinc-800 transition mr-2.5 cursor-pointer"
+                >
+                  <ShieldCheck className="h-4 w-4 text-emerald-400" />
+                  <span>CONSOLES ADMIN</span>
+                </button>
+              )}
               <button
                 onClick={() => setActiveTab('catalog')}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-all cursor-pointer ${
@@ -95,19 +108,28 @@ export default function Header({
               </button>
             </nav>
           ) : (
-            <nav className="hidden md:flex space-x-1">
-              <span className="px-4 py-2 rounded-full text-sm font-extrabold bg-zinc-950 text-white flex items-center space-x-1.5">
+            <nav className="hidden md:flex items-center space-x-2 bg-zinc-50 p-1 rounded-full border border-zinc-200">
+              <span className="px-3.5 py-1.5 rounded-full text-xs font-extrabold bg-zinc-950 text-white flex items-center space-x-1.5 shadow-sm">
                 <ShieldCheck className="h-4 w-4 text-emerald-400" />
-                <span>PANEL ADMINISTRATEUR UNIQUE</span>
+                <span>CONSOLE ADMINISTRATEUR</span>
               </span>
+              <button
+                onClick={() => {
+                  setAdminViewMode?.('client');
+                  setActiveTab('catalog');
+                }}
+                className="px-4 py-1.5 rounded-full text-xs font-bold text-rose-950 hover:bg-rose-50 border border-transparent hover:border-rose-100 transition whitespace-nowrap cursor-pointer"
+              >
+                Aperçu Boutique (Client)
+              </button>
             </nav>
           )}
 
           {/* Right Area: Session Details & Cart & Logout */}
           <div className="flex items-center space-x-4">
             
-            {/* Shopping Cart Button - ONLY seen by Clients */}
-            {currentUser.role === 'client' && (
+            {/* Shopping Cart Button - seen by Clients or Admin in preview mode */}
+            {(currentUser.role === 'client' || adminViewMode === 'client') && (
               <button
                 onClick={onOpenCart}
                 className="relative p-2.5 rounded-full bg-rose-50 text-rose-950 hover:bg-rose-100 transition-colors border border-rose-200/50 cursor-pointer"
@@ -150,9 +172,18 @@ export default function Header({
 
         </div>
 
-        {/* Mobile Navigation bar - ONLY seen by Clients */}
-        {currentUser.role === 'client' && (
+        {/* Mobile Navigation bar - seen by Clients or Admin in preview mode */}
+        {(currentUser.role === 'client' || adminViewMode === 'client') && (
           <div className="flex md:hidden items-center justify-center space-x-2 py-3 border-t border-rose-50">
+            {currentUser.role === 'admin' && (
+              <button
+                onClick={() => setAdminViewMode?.('admin')}
+                className="px-2.5 py-1.5 rounded-full text-[10px] font-black bg-zinc-950 text-white flex items-center space-x-1 cursor-pointer"
+              >
+                <ShieldCheck className="h-3 w-3 text-emerald-400" />
+                <span>ADMIN</span>
+              </button>
+            )}
             <button
               onClick={() => setActiveTab('catalog')}
               className={`px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer ${
@@ -182,12 +213,21 @@ export default function Header({
           </div>
         )}
 
-        {currentUser.role === 'admin' && (
-          <div className="flex md:hidden items-center justify-center py-2.5 border-t border-zinc-100">
-            <span className="text-[11px] font-extrabold text-zinc-950 tracking-wider flex items-center space-x-1">
+        {currentUser.role === 'admin' && adminViewMode === 'admin' && (
+          <div className="flex md:hidden items-center justify-between py-2.5 border-t border-zinc-100 px-3">
+            <span className="text-[10px] font-extrabold text-zinc-950 tracking-wider flex items-center space-x-1">
               <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
               <span>CONSOLE UNIQUE ADMIN : MAËL (COCODY)</span>
             </span>
+            <button
+              onClick={() => {
+                setAdminViewMode?.('client');
+                setActiveTab('catalog');
+              }}
+              className="text-[9px] font-black uppercase text-rose-500 bg-rose-50 hover:bg-rose-100 px-2.5 py-1 rounded-full border border-rose-150 transition cursor-pointer"
+            >
+              Aperçu Boutique
+            </button>
           </div>
         )}
 

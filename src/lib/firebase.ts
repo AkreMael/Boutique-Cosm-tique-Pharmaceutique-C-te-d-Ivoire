@@ -23,7 +23,7 @@ const app = initializeApp(firebaseConfig);
 
 // Initialize Services
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId || '(default)');
 
 // Authenticate user anonymously to satisfy "auth != null" firestore security rules
 export async function authenticateAnonymous() {

@@ -4,7 +4,8 @@ import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from "dotenv";
-import * as admin from 'firebase-admin';
+import { initializeApp, getApps } from 'firebase-admin/app';
+import { getFirestore, Firestore } from 'firebase-admin/firestore';
 
 // Load environment variables
 dotenv.config();
@@ -16,22 +17,24 @@ app.use(express.json());
 const PORT = 3000;
 
 // Initialize Firebase Admin SDK using application credentials or local project configuration
-let adminDb: admin.firestore.Firestore;
+let adminDb: Firestore;
 try {
   const configPath = path.join(process.cwd(), "firebase-applet-config.json");
   let projectId = "filant225-base";
+  let databaseId = "";
   if (fs.existsSync(configPath)) {
     const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
     projectId = config.projectId || projectId;
+    databaseId = config.firestoreDatabaseId || "";
   }
   
-  if (admin.apps.length === 0) {
-    admin.initializeApp({
+  if (getApps().length === 0) {
+    initializeApp({
       projectId: projectId
     });
   }
-  adminDb = admin.firestore();
-  console.log("Firebase admin SDK initialized with Cloud Project ID:", projectId);
+  adminDb = databaseId ? getFirestore(databaseId) : getFirestore();
+  console.log("Firebase admin SDK initialized with Cloud Project ID:", projectId, "Database ID:", databaseId || "(default)");
 } catch (error) {
   console.error("Firebase admin initialization error:", error);
 }
@@ -378,6 +381,30 @@ app.get("/api/categories", async (req, res) => {
     const snapshot = await adminDb.collection("categories").get();
     const list = snapshot.docs.map(doc => doc.data());
     res.json(list);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+app.post("/api/categories", async (req, res) => {
+  try {
+    const { slug, name, description, icon } = req.body;
+    if (!slug || !name) {
+      return res.status(400).json({ error: "Slug and Name are required" });
+    }
+    const newCategory = { slug, name, description: description || "", icon: icon || "Sparkles" };
+    await adminDb.collection("categories").doc(slug).set(newCategory);
+    res.status(201).json(newCategory);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+app.delete("/api/categories/:slug", async (req, res) => {
+  try {
+    const { slug } = req.params;
+    await adminDb.collection("categories").doc(slug).delete();
+    res.json({ message: "Catégorie supprimée avec succès" });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }

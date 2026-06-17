@@ -13,6 +13,7 @@ import { db, collection, doc, onSnapshot, setDoc, query, where, authenticateAnon
 export default function App() {
   // Navigation tabs
   const [activeTab, setActiveTab] = useState<string>('catalog');
+  const [adminViewMode, setAdminViewMode] = useState<'admin' | 'client'>('admin');
 
   // Authentication & Loading States
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -27,7 +28,17 @@ export default function App() {
   const [users, setUsers] = useState<User[]>([]);
 
   // Local UI States
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<CartItem[]>(() => {
+    const cached = localStorage.getItem('akwaba_cart');
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
@@ -40,6 +51,7 @@ export default function App() {
         setCurrentUser(parsed);
         if (parsed.role === 'admin') {
           setActiveTab('admin');
+          setAdminViewMode('admin');
         } else {
           setActiveTab('catalog');
         }
@@ -54,77 +66,23 @@ export default function App() {
     setLoading(false);
   }, []);
 
-  // 2. Real-Time Cloud Firestore Continuous Subscriptions
+  // 2. Real-Time Cloud Firestore Continuous Subscriptions (Public Collections)
   useEffect(() => {
     if (!currentUser) return;
 
-    // 1) Subscribe to Products Collection
+    // 1) Subscribe to Products Collection (Public Read allowed)
     const unsubProducts = onSnapshot(collection(db, "products"), (snap) => {
       const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
       setProducts(list);
     }, (err) => console.error("Realtime Products Subscribe error:", err));
 
-    // 2) Subscribe to Categories Collection
+    // 2) Subscribe to Categories Collection (Public Read allowed)
     const unsubCategories = onSnapshot(collection(db, "categories"), (snap) => {
       const list = snap.docs.map(doc => doc.data() as Category);
       setCategories(list);
     }, (err) => console.error("Realtime Categories Subscribe error:", err));
 
-    // 3) Subscribe to Orders Collection (Secure separation)
-    const oQuery = currentUser.role === 'admin'
-      ? collection(db, "orders")
-      : query(collection(db, "orders"), where("userId", "==", currentUser.id));
-
-    const unsubOrders = onSnapshot(oQuery, (snap) => {
-      const list = snap.docs.map(doc => doc.data() as Order);
-      list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      setOrders(list);
-    }, (err) => console.error("Realtime Orders Subscribe error:", err));
-
-    // 4) Subscribe to Chat Sessions Collection (Secure separation)
-    const cQuery = currentUser.role === 'admin'
-      ? collection(db, "chats")
-      : query(collection(db, "chats"), where("id", "==", currentUser.id));
-
-    const unsubChats = onSnapshot(cQuery, (snap) => {
-      const list = snap.docs.map(doc => doc.data() as ChatSession);
-      setChats(list);
-    }, (err) => console.error("Realtime Chats Subscribe error:", err));
-
-    // 5) Subscribe to Global Users List (Only for Admin to display Client names, profiles and statistics)
-    let unsubUsers = () => {};
-    if (currentUser.role === 'admin') {
-      unsubUsers = onSnapshot(collection(db, "users"), (snap) => {
-        const list = snap.docs.map(doc => doc.data() as User);
-        setUsers(list);
-      }, (err) => console.error("Realtime Users Subscribe error:", err));
-    }
-
-    // 6) Subscribe to User Basket/Cart dynamically linked to db
-    let unsubCart = () => {};
-    if (currentUser.role === 'client') {
-      unsubCart = onSnapshot(doc(db, "carts", currentUser.id), (docSnap) => {
-        if (docSnap.exists()) {
-          setCart(docSnap.data().items || []);
-        }
-      }, (err) => console.error("Realtime Cart sync error:", err));
-    }
-
-    return () => {
-      unsubProducts();
-      unsubCategories();
-      unsubOrders();
-      unsubChats();
-      unsubUsers();
-      unsubCart();
-    };
-  }, [currentUser]);
-
-  // 3. Real-Time Chat messages sync
-  useEffect(() => {
-    if (!currentUser) return;
-
-    // Listen to ALL messages so chat feeds can filter them instantly in real time
+    // 3) Subscribe to Messages Collection (Authenticated Read allowed)
     const unsubMessages = onSnapshot(collection(db, "messages"), (snap) => {
       const list = snap.docs.map(doc => doc.data() as ChatMessage);
       list.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
@@ -132,8 +90,47 @@ export default function App() {
     }, (err) => console.error("Realtime Messages Subscribe error:", err));
 
     return () => {
+      unsubProducts();
+      unsubCategories();
       unsubMessages();
     };
+  }, [currentUser]);
+
+  // 2.2 Secure Server REST Polling for Orders and Chats
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const fetchOrdersAndChats = async () => {
+      try {
+        // Fetch Orders
+        const ordUrl = currentUser.role === 'admin' 
+          ? '/api/orders' 
+          : `/api/orders/user/${currentUser.id}`;
+        const ordRes = await fetch(ordUrl);
+        if (ordRes.ok) {
+          const ordList = await ordRes.json() as Order[];
+          ordList.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          setOrders(ordList);
+        }
+
+        // Fetch Chats
+        const chatRes = await fetch('/api/chats');
+        if (chatRes.ok) {
+          const chatList = await chatRes.json() as ChatSession[];
+          setChats(chatList);
+        }
+      } catch (err) {
+        console.error("Failed to sync orders or chats with server API:", err);
+      }
+    };
+
+    // Run immediately on mount or user change
+    fetchOrdersAndChats();
+
+    // Setup periodic sync every 4 seconds
+    const interval = setInterval(fetchOrdersAndChats, 4000);
+
+    return () => clearInterval(interval);
   }, [currentUser]);
 
   // Handle Authentication submit
@@ -150,15 +147,13 @@ export default function App() {
       });
       const synchronizedUser: User = res.ok ? await res.json() : userPayload;
 
-      // Persist profile to Firestore users list
-      await setDoc(doc(db, "users", synchronizedUser.id), synchronizedUser, { merge: true });
-
       // Save locally
       localStorage.setItem('akwaba_user', JSON.stringify(synchronizedUser));
       setCurrentUser(synchronizedUser);
 
       if (synchronizedUser.role === 'admin') {
         setActiveTab('admin');
+        setAdminViewMode('admin');
       } else {
         setActiveTab('catalog');
       }
@@ -173,16 +168,10 @@ export default function App() {
     setCart([]);
   };
 
-  // E-commerce Cart Operations with synchronous database replication
+  // E-commerce Cart Operations with local persistence
   const syncCartWithDb = async (newCart: CartItem[]) => {
     setCart(newCart);
-    if (currentUser && currentUser.role === 'client') {
-      try {
-        await setDoc(doc(db, "carts", currentUser.id), { items: newCart }, { merge: true });
-      } catch (err) {
-        console.error("Failed to sync cart to Firestore:", err);
-      }
-    }
+    localStorage.setItem('akwaba_cart', JSON.stringify(newCart));
   };
 
   const handleAddToCart = (product: Product) => {
@@ -231,10 +220,7 @@ export default function App() {
     localStorage.setItem('akwaba_user', JSON.stringify(updatedUser));
 
     try {
-      // Synchronize back to database
-      await setDoc(doc(db, "users", currentUser.id), updatedUser, { merge: true });
-      
-      // Hit profile express endpoint for record consistency
+      // Hit profile express endpoint for record consistency (updates database using privileged admin SDK)
       await fetch(`/api/users/${currentUser.id}/profile`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -351,11 +337,29 @@ export default function App() {
         onOpenCart={() => setIsCartOpen(true)}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
+        adminViewMode={adminViewMode}
+        setAdminViewMode={setAdminViewMode}
       />
+
+      {/* Mode Preview visual banner for administrator preview convenience */}
+      {currentUser.role === 'admin' && adminViewMode === 'client' && (
+        <div id="admin-preview-top-alert" className="bg-rose-600 text-white text-xs font-bold py-2.5 px-4 text-center flex flex-col sm:flex-row justify-center items-center gap-1.5 shadow-sm border-b border-rose-500 animate-pulse">
+          <span>👀 MODE APERÇU BOUTIQUE ACTIF — Vous visualisez le rendu exact de la boutique côté client.</span>
+          <button 
+            onClick={() => {
+              setAdminViewMode('admin');
+              setActiveTab('admin');
+            }}
+            className="px-3 py-1 bg-zinc-950 font-black tracking-wide hover:bg-zinc-900 rounded-full text-[10px] uppercase cursor-pointer"
+          >
+            Quitter l'Aperçu & Retourner au Panel
+          </button>
+        </div>
+      )}
 
       {/* 2. CORE RENDERING ENGINE */}
       <main className="flex-1">
-        {currentUser.role === 'client' ? (
+        {(currentUser.role === 'client' || adminViewMode === 'client') ? (
           <>
             {activeTab === 'catalog' && (
               <Catalog
@@ -397,6 +401,12 @@ export default function App() {
             onUpdateProduct={handleUpdateProduct}
             onDeleteProduct={handleDeleteProduct}
             onUpdateOrderStatus={handleUpdateOrderStatus}
+            currentUser={currentUser}
+            chats={chats}
+            messages={messages}
+            onSendMessage={handleSendMessage}
+            onSendPharmacistPrescription={handleSendPharmacistPrescription}
+            onAddToCart={handleAddToCart}
           />
         )}
       </main>
