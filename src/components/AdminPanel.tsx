@@ -6,36 +6,30 @@ import {
 import { 
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
 } from 'recharts';
-import { Product, Order, ChatSession, Pharmacist, User as AppUser, AdminStats, Category } from '../types';
+import { Product, Order, ChatSession, User as AppUser, AdminStats, Category } from '../types';
 
 interface AdminPanelProps {
   products: Product[];
   orders: Order[];
-  pharmacists: Pharmacist[];
   users: AppUser[];
   categories: Category[];
   onAddProduct: (product: Omit<Product, 'id' | 'dateAdded'>) => void;
   onUpdateProduct: (product: Product) => void;
   onDeleteProduct: (id: string) => void;
   onUpdateOrderStatus: (orderId: string, status: Order['status']) => void;
-  onAddPharmacist: (pharmacist: Omit<Pharmacist, 'id' | 'active'>) => void;
-  onTogglePharmacistState: (id: string) => void;
 }
 
 export default function AdminPanel({
   products,
   orders,
-  pharmacists,
   users,
   categories,
   onAddProduct,
   onUpdateProduct,
   onDeleteProduct,
-  onUpdateOrderStatus,
-  onAddPharmacist,
-  onTogglePharmacistState
+  onUpdateOrderStatus
 }: AdminPanelProps) {
-  const [adminTab, setAdminTab] = useState<'stats' | 'orders' | 'products' | 'staff' | 'promos'>('stats');
+  const [adminTab, setAdminTab] = useState<'stats' | 'orders' | 'products' | 'promos'>('stats');
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(true);
 
@@ -51,11 +45,7 @@ export default function AdminPanel({
   const [prodCat, setProdCat] = useState('soins-visage');
   const [prodBrand, setProdBrand] = useState('PharmaPure CI');
 
-  // New pharmacist form states
-  const [showPharmacistModal, setShowPharmacistModal] = useState(false);
-  const [pharmName, setPharmName] = useState('');
-  const [pharmEmail, setPharmEmail] = useState('');
-  const [pharmSpec, setPharmSpec] = useState('Dermatologie dermo-cosmétique');
+
 
   // Create or update promotion form state
   const [promoProductId, setPromoProductId] = useState('');
@@ -151,18 +141,7 @@ export default function AdminPanel({
     setShowProductModal(true);
   };
 
-  const handlePharmacistSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onAddPharmacist({
-      name: pharmName,
-      email: pharmEmail,
-      specialty: pharmSpec,
-      avatar: 'https://images.unsplash.com/photo-1594824813573-246434de83fb?q=80&w=150&auto=format&fit=crop'
-    });
-    setPharmName('');
-    setPharmEmail('');
-    setShowPharmacistModal(false);
-  };
+
 
   const handleApplyPromoAction = () => {
     const p = products.find((prod) => prod.id === promoProductId);
@@ -183,8 +162,8 @@ export default function AdminPanel({
         {/* Dashboard Header */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between pb-6 border-b border-rose-100 gap-4 mb-8">
           <div>
-            <h2 className="text-3xl font-extrabold text-rose-950 font-sans tracking-tight">Console de Direction</h2>
-            <p className="text-zinc-500 text-xs mt-1">Gérer les produits cosmétiques, réguler les expéditions de commandes et valider les pharmaciens.</p>
+            <h2 className="text-3xl font-extrabold text-rose-950 font-sans tracking-tight">Console de Gestion (Boutique)</h2>
+            <p className="text-zinc-500 text-xs mt-1">Gérez le catalogue des articles de soins cosmétiques, validez les expéditions et configurez les promotions.</p>
           </div>
 
           {/* Tab Submenu */}
@@ -215,15 +194,6 @@ export default function AdminPanel({
             >
               <Sparkles className="h-4 w-4" />
               <span>Articles ({products.length})</span>
-            </button>
-            <button
-              onClick={() => setAdminTab('staff')}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
-                adminTab === 'staff' ? 'bg-zinc-900 text-white shadow-sm' : 'bg-white hover:bg-zinc-50 text-zinc-700'
-              }`}
-            >
-              <Users className="h-4 w-4" />
-              <span>Docteurs ({pharmacists.length})</span>
             </button>
             <button
               onClick={() => setAdminTab('promos')}
@@ -707,122 +677,7 @@ export default function AdminPanel({
           </div>
         )}
 
-        {/* ==================================== */}
-        {/* TAB 4: STAFF & PHARMACISTS CONFIG   */}
-        {/* ==================================== */}
-        {adminTab === 'staff' && (
-          <div className="space-y-6 animate-fade-in">
-            {/* Options bar */}
-            <div className="flex justify-end">
-              <button
-                onClick={() => setShowPharmacistModal(true)}
-                className="px-4 py-2.5 bg-rose-950 hover:bg-rose-900 text-white font-bold text-xs rounded-xl flex items-center space-x-1.5 shadow-sm"
-              >
-                <Plus className="h-4 w-4" />
-                <span>Enrôler un Pharmacien</span>
-              </button>
-            </div>
 
-            {/* Pharmacists list */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {pharmacists.map((ph) => (
-                <div key={ph.id} className="bg-white border border-rose-100 rounded-3xl p-5 shadow-sm flex items-center gap-4 relative">
-                  <img src={ph.avatar} alt={ph.name} className="h-16 w-16 object-cover rounded-full border" />
-                  
-                  <div className="grow min-w-0">
-                    <p className="font-bold text-rose-950 text-sm truncate leading-none mb-1">{ph.name}</p>
-                    <p className="text-[10px] text-emerald-600 font-semibold">{ph.specialty}</p>
-                    <p className="text-xs text-zinc-400 mt-2 font-mono">{ph.email}</p>
-                  </div>
-
-                  {/* Toggle state active/deactive */}
-                  <div className="text-right">
-                    <button
-                      onClick={() => onTogglePharmacistState(ph.id)}
-                      className={`px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase transition ${
-                        ph.active 
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
-                          : 'bg-red-50 text-red-650 border border-red-200'
-                      }`}
-                    >
-                      {ph.active ? 'Actif' : 'Désactivé'}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* PHARMACIST ADD MODAL */}
-            {showPharmacistModal && (
-              <div className="fixed inset-0 z-50 overflow-y-auto" role="dialog">
-                <div onClick={() => setShowPharmacistModal(false)} className="fixed inset-0 bg-zinc-900/60 backdrop-blur-xs"></div>
-                <div className="flex items-center justify-center min-h-screen p-4 z-55 relative">
-                  <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-xl space-y-4 text-left border border-rose-100">
-                    <div className="flex justify-between items-center pb-2 border-b">
-                      <h4 className="font-bold text-rose-950 text-sm">Nouveau Conseiller Pharmacien</h4>
-                      <button onClick={() => setShowPharmacistModal(false)} className="p-1 text-zinc-400 hover:text-rose-950">
-                        <X className="h-5 w-5" />
-                      </button>
-                    </div>
-
-                    <form onSubmit={handlePharmacistSubmit} className="space-y-4 text-xs font-sans">
-                      <div>
-                        <label className="block text-zinc-700 font-bold mb-1">Nom complet (Dr) *</label>
-                        <input
-                          type="text"
-                          required
-                          value={pharmName}
-                          onChange={(e) => setPharmName(e.target.value)}
-                          placeholder="Dr. Akissi Kouamé"
-                          className="w-full p-3 bg-zinc-50 border border-zinc-200 rounded-xl"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-zinc-700 font-bold mb-1">Adresse Email *</label>
-                        <input
-                          type="email"
-                          required
-                          value={pharmEmail}
-                          onChange={(e) => setPharmEmail(e.target.value)}
-                          placeholder="nom@pharmacie.ci"
-                          className="w-full p-3 bg-zinc-50 border border-zinc-200 rounded-xl"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-zinc-700 font-bold mb-1">Spécialité clinique *</label>
-                        <input
-                          type="text"
-                          required
-                          value={pharmSpec}
-                          onChange={(e) => setPharmSpec(e.target.value)}
-                          className="w-full p-3 bg-zinc-50 border border-zinc-200 rounded-xl"
-                        />
-                      </div>
-
-                      <div className="pt-2 flex justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setShowPharmacistModal(false)}
-                          className="px-4 py-2.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-bold rounded-xl"
-                        >
-                          Annuler
-                        </button>
-                        <button
-                          type="submit"
-                          className="px-4 py-2.5 bg-rose-950 hover:bg-rose-900 text-white font-bold rounded-xl"
-                        >
-                          Enregistrer
-                        </button>
-                      </div>
-                    </form>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
 
         {/* ==================================== */}
         {/* TAB 5: MANAGING TEMPORARY PROMOTIONS */}
@@ -831,7 +686,7 @@ export default function AdminPanel({
           <div className="bg-white rounded-3xl p-6 border border-rose-100 shadow-sm space-y-6 animate-fade-in text-xs font-sans">
             <div>
               <h3 className="font-extrabold text-rose-950 text-sm mb-1">Appliquer des Réductions d'Étalage</h3>
-              <p className="text-zinc-500 mb-4">Créez des remises instantanées sur votre stock central de parapharmacie.</p>
+              <p className="text-zinc-500 mb-4">Créez des remises instantanées sur votre stock d'articles cosmétiques.</p>
             </div>
 
             <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-150 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">

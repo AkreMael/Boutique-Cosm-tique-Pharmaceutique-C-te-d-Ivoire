@@ -36,7 +36,7 @@ const SEED_PRODUCTS = [
   {
     id: "prod-1",
     name: "Lait Hydratant Actif au Beurre de Karité",
-    description: "Lait corporel réparateur enrichi en pur beurre de karité de Côte d'Ivoire. Idéal pour hydrater les peaux sèches et déshydratées sous le climat tropical d'Abidjan.",
+    description: "Lait corporel réparateur enrichi en pur beurre de karité de Côte d'Ivoire. Idéal pour hydrater les peaux sèches et déshydratées sous le climat tropical.",
     price: 7500,
     promoPrice: 6000,
     stock: 25,
@@ -54,7 +54,7 @@ const SEED_PRODUCTS = [
     stock: 45,
     images: ["https://images.unsplash.com/photo-1608248597481-496100c80836?q=80&w=600&auto=format&fit=crop"],
     category: "soins-visage",
-    brand: "PharmaPure CI",
+    brand: "SoinPur CI",
     dateAdded: "2026-05-15T10:30:00Z",
     isAvailable: true
   },
@@ -86,7 +86,7 @@ const SEED_PRODUCTS = [
   {
     id: "prod-5",
     name: "Savon Saponifié à Froid Coco & Karité",
-    description: "Savon artisanal hypoallergénique fabriqué localement. Nettoie en profondeur le corps et le visage sans tirailler. Recommandé par l'association des pharmaciens.",
+    description: "Savon artisanal hypoallergénique fabriqué localement. Nettoie en profondeur le corps et le visage sans tirailler.",
     price: 2500,
     stock: 120,
     images: ["https://images.unsplash.com/photo-1607006342440-b7eb2065cc32?q=80&w=600&auto=format&fit=crop"],
@@ -102,28 +102,28 @@ const SEED_PRODUCTS = [
     price: 11000,
     stock: 30,
     images: ["https://images.unsplash.com/photo-1598440947619-2c35fc9aa908?q=80&w=600&auto=format&fit=crop"],
-    category: "parapharmacie",
-    brand: "PharmaPure CI",
+    category: "soins-visage",
+    brand: "SoinPur CI",
     dateAdded: "2026-06-02T16:45:00Z",
     isAvailable: true
   },
   {
     id: "prod-7",
-    name: "Lait Doux de Toilette Bébé Mandarine",
-    description: "Nettoie en douceur le visage, le corps et le siège de votre bébé. Calme et rafraîchit immédiatement la barrière cutanée des tout-petits.",
+    name: "Lait Doux de Toilette Mandarine",
+    description: "Nettoie en douceur le visage et le corps de toute la famille. Calme et rafraîchit immédiatement la barrière cutanée.",
     price: 4500,
     promoPrice: 4000,
     stock: 35,
     images: ["https://images.unsplash.com/photo-1519689680058-324335c77ebe?q=80&w=600&auto=format&fit=crop"],
-    category: "bebe-maternite",
-    brand: "BébéSika",
+    category: "soins-corps",
+    brand: "DoucHé",
     dateAdded: "2026-06-05T11:00:00Z",
     isAvailable: true
   },
   {
     id: "prod-8",
     name: "Fond de Teint Crème Mat Extrême Abidjan",
-    description: "Maquillage régulateur de brisants à haute couvrance, spécialement conçu pour rester impeccable pendant 24h sous l'humidité ivoirienne.",
+    description: "Maquillage régulateur de brillance à haute couvrance, spécialement conçu pour rester impeccable pendant 24h sous l'humidité ivoirienne.",
     price: 14000,
     stock: 22,
     images: ["https://images.unsplash.com/photo-1596462502278-27bfdc403348?q=80&w=600&auto=format&fit=crop"],
@@ -131,23 +131,56 @@ const SEED_PRODUCTS = [
     brand: "Eburnie Glam",
     dateAdded: "2026-06-10T15:20:00Z",
     isAvailable: true
+  },
+  {
+    id: "prod-9",
+    name: "Brume Parfumée Fleur d'Oranger",
+    description: "Une fragrance envoûtante de fleur d'oranger et de jasmin blanc, parfaite pour une fraîcheur florale longue durée.",
+    price: 12500,
+    stock: 18,
+    images: ["https://images.unsplash.com/photo-1547887537-6158d64c35b3?q=80&w=600&auto=format&fit=crop"],
+    category: "parfums",
+    brand: "Senteur d'Éburnie",
+    dateAdded: "2026-06-11T12:00:00Z",
+    isAvailable: true
+  },
+  {
+    id: "prod-10",
+    name: "Huile de Coco Vierge de Jacqueville",
+    description: "Huile de coco de Jacqueville extraite à froid, riche en antioxydants. Idéale pour nourrir profondément les cheveux et sublimer le teint.",
+    price: 4500,
+    promoPrice: 3500,
+    stock: 35,
+    images: ["https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?q=80&w=600&auto=format&fit=crop"],
+    category: "beaute-naturelle",
+    brand: "Nature & Éclat",
+    dateAdded: "2026-06-12T10:00:00Z",
+    isAvailable: true
+  },
+  {
+    id: "prod-11",
+    name: "Rouleau de Massage en Quartz Rose",
+    description: "Outil de massage facial en pierre de quartz véritable pour stimuler la microcirculation, réduire les cernes et raffermir la peau.",
+    price: 8000,
+    stock: 40,
+    images: ["https://images.unsplash.com/photo-1619451334792-150fd785ee74?q=80&w=600&auto=format&fit=crop"],
+    category: "accessoires-beaute",
+    brand: "Akwaba Beauté",
+    dateAdded: "2026-06-13T14:00:00Z",
+    isAvailable: true
   }
 ];
 
 const SEED_CATEGORIES = [
   { slug: "soins-visage", name: "Soins du visage", description: "Sérums, nettoyants, crèmes protectrices de jour", iconName: "Smile" },
   { slug: "soins-corps", name: "Soins du corps", description: "Laits hydratants, huiles de gommage, baumes", iconName: "Sparkles" },
-  { slug: "produits-capillaires", name: "Produits capillaires", description: "Masques, mousses de pousse, shampoings hydratants", iconName: "Wind" },
   { slug: "maquillage", name: "Maquillage", description: "Fonds de teint matifiants, rouges à lèvres longue tenue", iconName: "Palette" },
-  { slug: "hygiene", name: "Hygiène", description: "Savons locaux, gels de douche et déodorants", iconName: "ShieldAlert" },
-  { slug: "bebe-maternite", name: "Bébé et maternité", description: "Gamme pédiatrique pour la peau sensible des bébés", iconName: "Baby" },
-  { slug: "parapharmacie", name: "Parapharmacie", description: "Protecteurs solaires, eaux micellaires cliniques", iconName: "HeartPulse" },
+  { slug: "produits-capillaires", name: "Produits capillaires", description: "Masques, mousses de pousse, shampoings hydratants", iconName: "Wind" },
+  { slug: "parfums", name: "Parfums", description: "Fragrances, brumes corporelles d'Afrique de l'Ouest", iconName: "Flame" },
+  { slug: "hygiene", name: "Hygiène", description: "Savons locaux, gels de douche et déodorants", iconName: "ShowerHead" },
+  { slug: "beaute-naturelle", name: "Beauté naturelle", description: "Huiles essentielles pures et beurres organiques", iconName: "Leaf" },
+  { slug: "accessoires-beaute", name: "Accessoires beauté", description: "Rouleaux de massage, brosses exfoliantes", iconName: "Compass" },
   { slug: "promotions", name: "Promotions", description: "Offres temporaires à ne pas rater en Côte d'Ivoire", iconName: "Percent" }
-];
-
-const SEED_PHARMACISTS = [
-  { id: "pharm-1", name: "Dr. Akissi Kouamé", email: "akissi.kouame@gmail.com", specialty: "Cosmétologie & Parapharmacie", avatar: "https://images.unsplash.com/photo-1594824813573-246434de83fb?q=80&w=150&auto=format&fit=crop", active: true },
-  { id: "pharm-2", name: "Dr. Landry Yao", email: "landry.yao@gmail.com", specialty: "Dermatologie de parapharmacie", avatar: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?q=80&w=150&auto=format&fit=crop", active: true }
 ];
 
 const SEED_USERS = [
@@ -159,15 +192,6 @@ const SEED_USERS = [
     city: "Abidjan",
     address: "Cocody Ambassades",
     role: "admin"
-  },
-  {
-    id: "pharmacist-usr",
-    name: "Dr. Akissi Kouamé (Pharmacien)",
-    phone: "0505050505",
-    email: "akissi@cosmetiques.ci",
-    city: "Abidjan",
-    address: "Plateau, Boulevard Hassan II",
-    role: "pharmacist"
   },
   {
     id: "prive-1",
@@ -192,7 +216,7 @@ const SEED_CHATS = [
     id: "prive-1",
     clientName: "Awa Diop",
     clientPhone: "0102030405",
-    lastMessage: "Bonjour Dr. Akissi, j'ai des taches d'acné récurrentes sur le visage, que me conseillez-vous ?",
+    lastMessage: "Bonjour, j'ai des taches d'acné récurrentes sur le visage, que me conseillez-vous ?",
     lastTimestamp: "2026-06-16T18:30:00Z",
     active: true,
     unreadCount: 1
@@ -205,7 +229,7 @@ const SEED_MESSAGES = [
     chatId: "prive-1",
     sender: "client",
     senderName: "Awa Diop",
-    message: "Bonjour Dr. Akissi, j'ai des taches d'acné récurrentes sur le visage, que me conseillez-vous ?",
+    message: "Bonjour, j'ai des taches d'acné récurrentes sur le visage, que me conseillez-vous ?",
     timestamp: "2026-06-16T18:30:00Z"
   }
 ];
@@ -272,7 +296,6 @@ function initDatabase() {
     const db = {
       products: SEED_PRODUCTS,
       categories: SEED_CATEGORIES,
-      pharmacists: SEED_PHARMACISTS,
       users: SEED_USERS,
       chats: SEED_CHATS,
       messages: SEED_MESSAGES,
@@ -297,7 +320,6 @@ function initDatabase() {
       const db = {
         products: SEED_PRODUCTS,
         categories: SEED_CATEGORIES,
-        pharmacists: SEED_PHARMACISTS,
         users: SEED_USERS,
         chats: SEED_CHATS,
         messages: SEED_MESSAGES,
@@ -403,7 +425,7 @@ app.post("/api/users/login", (req, res) => {
       email: email || "client@cosmetiques.ci",
       city: "Abidjan",
       address: "Angré Nouveau Horizon",
-      role: email === "admin@cosmetiques.ci" ? "admin" : (email === "akissi@cosmetiques.ci" ? "pharmacist" : "client")
+      role: email === "admin@cosmetiques.ci" ? "admin" : "client"
     };
     db.users.push(newUser);
     writeDB(db);
@@ -523,8 +545,8 @@ app.post("/api/chats/:chatId/messages", async (req, res) => {
       ? `Le client est un(e) ${userProfile.gender} de ${userProfile.age} ans. Type de peau : ${userProfile.skinType}, Cuir chevelu/cheveux : ${userProfile.hairType}. Préoccupations : ${userProfile.concerns.join(", ")}.`
       : "Le client n'a pas encore complété son questionnaire beauté.";
 
-    const systemPrompt = `Tu es Dr. Akissi Kouamé, pharmacienne conseillère experte en dermo-cosmétique pour notre boutique centrale en Côte d'Ivoire.
-Ton objectif est d'écouter les préoccupations des clients, de poser un diagnostic amical mais professionnel, et de lui suggérer les produits spécifiques issus de notre catalogue. Une seule boutique gère toutes les livraisons en Côte d'Ivoire.
+    const systemPrompt = `Tu es Inès, conseillère experte en beauté cosmétique pour notre boutique unique Akwaba Beauté en Côte d'Ivoire.
+Ton objectif est d'écouter les préoccupations de beauté des clients, de poser un diagnostic de peau et capillaire complice et professionnel, et de lui suggérer les produits spécifiques de soins issus de notre catalogue. Une seule boutique gère toutes les livraisons en Côte d'Ivoire.
 Réponds exclusivement en Français branché mais soigné (ton amical ivoirien poli, chaleureux et professionnel. Utilise des expressions comme "Bienvenue chez nous", "Akwaba").
 La monnaie nationale est le Franc CFA (XOF). Toutes tes suggestions de prix doivent être exactes par rapport au catalogue ci-dessous.
 
@@ -535,9 +557,9 @@ NOTRE CATALOGUE PRODUITS DE LA BOUTIQUE :
 ${productsString}
 
 Consignes impératives pour ta réponse :
-1. Analyse le message du client et réponds d'un ton chaleureux et clinique.
+1. Analyse le message du client et réponds d'un ton chaleureux et rassurant de coach beauté.
 2. Identifie 1 ou 2 produits correspondants exactement dans notre catalogue et recommande-les explicitement avec leur nom exact, marque et leur prix en FCFA (par exemple: "Lait Hydratant Actif au Beurre de Karité à 6000 FCFA").
-3. Donne des conseils pratiques d'utilisation adaptés au climat humide ou sec d'Afrique de l'Ouest.
+3. Donne des conseils pratiques d'utilisation adaptés au climat humide ou chaud de Côte d'Ivoire.
 4. Reste concise (moins de 200 mots) pour assurer une lecture agréable en messagerie instantanée.`;
 
     try {
@@ -553,7 +575,7 @@ Consignes impératives pour ta réponse :
             temperature: 0.8
           }
         });
-        aiText = aiResponse.text || "Bonjour, je examine votre demande. Nos spécialistes vont vous répondre.";
+        aiText = aiResponse.text || "Bonjour, j'analyse votre demande beauté de ce pas. Notre équipe vous conseille au mieux !";
         
         // Extract product IDs that were mentioned
         db.products.forEach((p: any) => {
@@ -565,16 +587,16 @@ Consignes impératives pour ta réponse :
         // Fallback offline responses if API key is absent
         const keyword = message.toLowerCase();
         if (keyword.includes("tache") || keyword.includes("acne") || keyword.includes("bouton")) {
-          aiText = "Akwaba! À Abidjan, le climat chaud stimule la production des glandes sébacées. Pour vos taches et boutons, je vous invite à découvrir notre 'Sérum Concentré Éclat & Anti-Taches' de DermIvoire (10 500 FCFA) couplé à notre 'Gel Nettoyant Visage Anti-Imperfections' de PharmaPure (5 000 FCFA). Lavez délicatement votre visage matin et soir, ne triturez pas les boutons. Livraison rapide partout en Côte d'Ivoire!";
+          aiText = "Akwaba! À Abidjan, le climat chaud stimule la production du sébum. Pour vos taches et boutons sur le visage, je vous invite à découvrir notre 'Sérum Concentré Éclat & Anti-Taches' de DermIvoire (10 500 FCFA) couplé à notre 'Gel Nettoyant Visage Anti-Imperfections' de SoinPur (5 000 FCFA). Lavez délicatement votre visage matin et soir. Livraison rapide partout en Côte d'Ivoire!";
           suggestedIds = ["prod-2", "prod-3"];
         } else if (keyword.includes("sec") || keyword.includes("hydrat") || keyword.includes("karite")) {
-          aiText = "Bonjour ma chère! Pour la peau sèche, notre 'Lait Hydratant Actif au Beurre de Karité' (Promotion à 6 000 FCFA au lieu de 7 500 FCFA) de Glow Éburnie est un véritable délice réparateur. Appliquez-le juste après votre douche chaude pour emprisonner l'hydratation. Bisous de l'équipe!";
+          aiText = "Bonjour ma chère! Pour réparer la peau sèche, notre 'Lait Hydratant Actif au Beurre de Karité' de Glow Éburnie (Promotion à 6 000 FCFA) est un véritable délice. Appliquez-le juste après votre douche pour sceller l'hydratation. Bisous de l'équipe Akwaba Beauté !";
           suggestedIds = ["prod-1", "prod-5"];
         } else if (keyword.includes("cheveu") || keyword.includes("pousse") || keyword.includes("chute")) {
-          aiText = "Bonjour ! Le cheveu crépu a besoin d'agents humectants de qualité. Notre 'Mousse Capillaire Fortifiante Pousse Active' (9 500 FCFA) de Sika Secrets stimule le cuir chevelu. Massez pendant 3 minutes après application. Vous verrez des miracles en quelques semaines !";
+          aiText = "Bonjour ! Le cheveu afro ou crépu a besoin d'humectants riches. Notre 'Mousse Capillaire Fortifiante Pousse Active' (9 500 FCFA) de Sika Secrets stimule le cuir chevelu. Massez pendant 3 minutes après application, vous verrez des miracles !";
           suggestedIds = ["prod-4"];
         } else {
-          aiText = "Akwaba! Je suis le Dr. Akissi Kouamé. J'ai bien reçu votre message. Pour vous conseiller au mieux, je vous conseille de remplir notre Questionnaire Beauté sur votre profil. Pour le nettoyage quotidien, optez sans hésiter pour notre 'Savon Coco & Karité' (2 500 FCFA), fabriqué artisanalement. Dites-m'en plus sur votre routine !";
+          aiText = "Akwaba! Je suis Inès, votre conseillère beauté. J'ai bien reçu votre message. Pour vous orienter au mieux, complétez notre Questionnaire Beauté sur votre profil. Notre 'Savon Beurre de Coco & Karité' (2 550 FCFA) artisanal est également très recommandé !";
           suggestedIds = ["prod-5"];
         }
       }
@@ -582,8 +604,8 @@ Consignes impératives pour ta réponse :
       const aiMsg = {
         id: `msg-${Date.now() + 1}`,
         chatId,
-        sender: "pharmacist" as const,
-        senderName: "Dr. Akissi Kouamé (AI)",
+        sender: "admin" as const,
+        senderName: "Inès, Conseillère Beauté (AI)",
         message: aiText,
         timestamp: new Date().toISOString(),
         suggestedProductIds: suggestedIds
@@ -621,7 +643,7 @@ app.post("/api/diagnostics/analyze", async (req, res) => {
   const db = getDB();
 
   // Create prompt for Gemini to generate a highly detailed and beautifully structured skincare routine
-  const prompt = `Génère un diagnostic de beauté cosmétique et parapharmacie sur-mesure pour un client en Côte d'Ivoire.
+  const prompt = `Génère un diagnostic de beauté cosmétique et conseils de soins sur-mesure pour un client en Côte d'Ivoire.
 Profil :
 - Genre : ${gender}
 - Âge : ${age} ans
@@ -633,7 +655,7 @@ Tu dois renvoyer obligatoirement la réponse sous format JSON qui correspond exa
 
 Schémas attendu :
 {
-  "diagnostic": "Rapport clinique vulgarisé expliquant pourquoi la peau/les cheveux réagissent ainsi sous le climat ivoirien d'Afrique de l'Ouest (chaleur, humidité d'Abidjan ou sécheresse de l'Harmattan d'hier)",
+  "diagnostic": "Analyse douce et personnalisée expliquant pourquoi la peau/les cheveux réagissent ainsi sous le climat ivoirien d'Afrique de l'Ouest (chaleur, humidité d'Abidjan ou sécheresse de l'Harmattan d'hier)",
   "routineMatin": [
     { "step": "Nom de l'étape (ex: Nettoyage)", "instruction": "Explication sur comment appliquer et pourquoi sous le soleil" }
   ],
@@ -785,38 +807,6 @@ app.put("/api/orders/:id/status", (req, res) => {
     res.json(db.orders[index]);
   } else {
     res.status(404).json({ error: "Commande introuvable" });
-  }
-});
-
-// 7. Pharmacists lists for administrator management
-app.get("/api/pharmacists", (req, res) => {
-  const db = getDB();
-  res.json(db.pharmacists);
-});
-
-app.post("/api/pharmacists", (req, res) => {
-  const db = getDB();
-  const newPharmacist = {
-    id: `pharm-${Date.now()}`,
-    ...req.body,
-    avatar: req.body.avatar || "https://images.unsplash.com/photo-1594824813573-246434de83fb?q=80&w=150&auto=format&fit=crop",
-    active: true
-  };
-  db.pharmacists.push(newPharmacist);
-  writeDB(db);
-  res.status(201).json(newPharmacist);
-});
-
-app.put("/api/pharmacists/:id", (req, res) => {
-  const { id } = req.params;
-  const db = getDB();
-  const index = db.pharmacists.findIndex((p: any) => p.id === id);
-  if (index !== -1) {
-    db.pharmacists[index] = { ...db.pharmacists[index], ...req.body };
-    writeDB(db);
-    res.json(db.pharmacists[index]);
-  } else {
-    res.status(404).json({ error: "Pharmacien non trouvé" });
   }
 });
 

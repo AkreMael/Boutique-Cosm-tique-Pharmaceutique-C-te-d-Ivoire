@@ -15,11 +15,12 @@ export interface Product {
 export type CategorySlug =
   | 'soins-visage'
   | 'soins-corps'
-  | 'produits-capillaires'
   | 'maquillage'
+  | 'produits-capillaires'
+  | 'parfums'
   | 'hygiene'
-  | 'bebe-maternite'
-  | 'parapharmacie'
+  | 'beaute-naturelle'
+  | 'accessoires-beaute'
   | 'promotions';
 
 export interface Category {
@@ -36,7 +37,7 @@ export interface User {
   email: string;
   city: string;
   address: string;
-  role: 'client' | 'pharmacist' | 'admin';
+  role: 'client' | 'admin';
   skinProfile?: BeautyProfile;
 }
 
@@ -45,7 +46,7 @@ export interface BeautyProfile {
   age: number;
   skinType: 'Sèche' | 'Grasse' | 'Mixte' | 'Normale' | 'Sensible';
   hairType: 'Crépu' | 'Frisé' | 'Bouclé' | 'Lisse' | 'Sec' | 'Gras';
-  concerns: string[]; // e.g. Acné, Taches, Hydratation, Chute de cheveux, etc.
+  concerns: string[]; // e.g. Acné, Taches, Hydratation, etc.
 }
 
 export interface CartItem {
@@ -86,7 +87,7 @@ export interface Order {
 export interface ChatMessage {
   id: string;
   chatId: string;
-  sender: 'client' | 'pharmacist' | 'system';
+  sender: 'client' | 'admin' | 'system';
   senderName: string;
   message: string;
   timestamp: string;
@@ -102,15 +103,6 @@ export interface ChatSession {
   lastTimestamp: string;
   active: boolean;
   unreadCount?: number;
-}
-
-export interface Pharmacist {
-  id: string;
-  name: string;
-  email: string;
-  specialty: string;
-  avatar: string;
-  active: boolean;
 }
 
 export interface AdminStats {

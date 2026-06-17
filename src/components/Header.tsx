@@ -6,7 +6,7 @@ interface HeaderProps {
   currentUser: AppUser;
   cart: CartItem[];
   cartCount: number;
-  onRoleChange: (role: 'client' | 'pharmacist' | 'admin') => void;
+  onRoleChange: (role: 'client' | 'admin') => void;
   onOpenCart: () => void;
   activeTab: string;
   setActiveTab: (tab: string) => void;
@@ -43,14 +43,14 @@ export default function Header({
             onClick={() => setActiveTab('catalog')} 
             className="flex items-center space-x-3 cursor-pointer select-none"
           >
-            <div className="h-11 w-11 rounded-full bg-rose-500 flex items-center justify-center shadow-md shadow-rose-200">
-              <HeartPulse className="h-6 w-6 text-white" />
+            <div className="h-11 w-11 rounded-full bg-rose-500 flex items-center justify-center shadow-md shadow-rose-200 shadow-sm">
+              <Sparkles className="h-5 w-5 text-white animate-pulse" />
             </div>
             <div>
               <h1 className="text-xl font-bold font-sans text-rose-950 tracking-tight leading-none">
-                Akwaba <span className="text-rose-500">PharmaSkin</span>
+                Akwaba <span className="text-rose-500">Beauté</span>
               </h1>
-              <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-mono">Cosmétique & Parapharmacie</p>
+              <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-mono">Boutique Cosmétique & Soins</p>
             </div>
           </div>
 
@@ -60,7 +60,7 @@ export default function Header({
               onClick={() => setActiveTab('catalog')}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
                 activeTab === 'catalog'
-                  ? 'bg-rose-50 text-rose-950 font-semibold'
+                  ? 'bg-rose-50 text-rose-950 font-semibold border border-rose-100'
                   : 'text-zinc-600 hover:text-rose-950 hover:bg-zinc-50'
               }`}
             >
@@ -81,12 +81,12 @@ export default function Header({
               onClick={() => setActiveTab('chat')}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center space-x-1.5 relative ${
                 activeTab === 'chat'
-                  ? 'bg-rose-50 text-rose-950 font-semibold'
+                  ? 'bg-rose-50 text-rose-950 font-semibold border border-rose-100'
                   : 'text-zinc-600 hover:text-rose-950 hover:bg-zinc-50'
               }`}
             >
               <MessageSquare className="h-4 w-4" />
-              <span>Conseil Pharmacien</span>
+              <span>Conseils & Messagerie</span>
             </button>
             
             {currentUser.role === 'admin' && (
@@ -102,20 +102,6 @@ export default function Header({
                 <span>Panel Admin</span>
               </button>
             )}
-
-            {currentUser.role === 'pharmacist' && (
-              <button
-                onClick={() => setActiveTab('pharmacist')}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center space-x-1.5 ${
-                  activeTab === 'pharmacist'
-                    ? 'bg-emerald-600 text-white font-semibold'
-                    : 'text-emerald-700 hover:bg-emerald-50 font-medium'
-                }`}
-              >
-                <ShieldCheck className="h-4 w-4" />
-                <span>Espace Praticien</span>
-              </button>
-            )}
           </nav>
 
           {/* Right Area: Interactive Session Simulation Controls */}
@@ -126,7 +112,7 @@ export default function Header({
               <span className="text-[10px] uppercase font-mono tracking-wider font-semibold text-zinc-500 px-2 hidden sm:inline-block">Simuler:</span>
               <button
                 onClick={() => onRoleChange('client')}
-                className={`px-2 py-1 rounded-lg text-xs font-medium transition ${
+                className={`px-3 py-1 rounded-lg text-xs font-medium transition ${
                   currentUser.role === 'client'
                     ? 'bg-white text-rose-950 shadow-sm font-semibold'
                     : 'text-zinc-500 hover:text-zinc-800'
@@ -135,24 +121,14 @@ export default function Header({
                 Client
               </button>
               <button
-                onClick={() => onRoleChange('pharmacist')}
-                className={`px-2 py-1 rounded-lg text-xs font-medium transition ${
-                  currentUser.role === 'pharmacist'
-                    ? 'bg-emerald-500 text-white shadow-sm font-semibold'
-                    : 'text-zinc-500 hover:text-zinc-800'
-                }`}
-              >
-                Docteur
-              </button>
-              <button
                 onClick={() => onRoleChange('admin')}
-                className={`px-2 py-1 rounded-lg text-xs font-medium transition ${
+                className={`px-3 py-1 rounded-lg text-xs font-medium transition ${
                   currentUser.role === 'admin'
                     ? 'bg-zinc-900 text-white shadow-sm font-semibold'
                     : 'text-zinc-500 hover:text-zinc-800'
                 }`}
               >
-                Admin
+                Admin (Vendeur)
               </button>
             </div>
 
@@ -175,15 +151,13 @@ export default function Header({
               <div className="h-9 w-9 rounded-full bg-zinc-200 border-2 border-rose-200 flex items-center justify-center text-rose-950 font-bold text-xs shadow-sm overflow-hidden">
                 {currentUser.role === 'client' ? (
                   <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150&auto=format&fit=crop" className="h-full w-full object-cover" alt="Profile" />
-                ) : currentUser.role === 'pharmacist' ? (
-                  <img src="https://images.unsplash.com/photo-1594824813573-246434de83fb?q=80&w=150&auto=format&fit=crop" className="h-full w-full object-cover" alt="Doctor" />
                 ) : (
                   <span className="text-zinc-700 bg-zinc-200 w-full h-full flex items-center justify-center">A</span>
                 )}
               </div>
               <div className="hidden lg:block text-left">
                 <p className="text-xs font-semibold leading-none text-rose-950">{currentUser.name}</p>
-                <p className="text-[10px] uppercase font-mono font-medium text-rose-500 mt-0.5">{currentUser.role}</p>
+                <p className="text-[10px] uppercase font-mono font-medium text-rose-500 mt-0.5">{currentUser.role === 'admin' ? 'Vendeur' : 'Client'}</p>
               </div>
             </div>
 
@@ -227,16 +201,6 @@ export default function Header({
               }`}
             >
               Admin
-            </button>
-          )}
-          {currentUser.role === 'pharmacist' && (
-            <button
-              onClick={() => setActiveTab('pharmacist')}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium ${
-                activeTab === 'pharmacist' ? 'bg-emerald-600 text-white font-semibold' : 'text-emerald-700'
-              }`}
-            >
-              Docteur
             </button>
           )}
         </div>

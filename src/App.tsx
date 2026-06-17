@@ -5,7 +5,7 @@ import BeautyQuestionnaire from './components/BeautyQuestionnaire';
 import PharmacistChat from './components/PharmacistChat';
 import Cart from './components/Cart';
 import AdminPanel from './components/AdminPanel';
-import { Product, Category, User, CartItem, Order, ChatSession, ChatMessage, Pharmacist, BeautyProfile } from './types';
+import { Product, Category, User, CartItem, Order, ChatSession, ChatMessage, BeautyProfile } from './types';
 import { HeartPulse, Plus, Check, Star, X, Shield, Info, ShoppingBag } from 'lucide-react';
 
 export default function App() {
@@ -16,7 +16,6 @@ export default function App() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [pharmacists, setPharmacists] = useState<Pharmacist[]>([]);
   const [chats, setChats] = useState<ChatSession[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [users, setUsers] = useState<User[]>([
@@ -50,11 +49,10 @@ export default function App() {
   // Fetch initial collections
   const loadData = async () => {
     try {
-      const [resProd, resCat, resOrders, resPharm, resChats, resMessages] = await Promise.all([
+      const [resProd, resCat, resOrders, resChats, resMessages] = await Promise.all([
         fetch('/api/products').then((r) => r.json()),
         fetch('/api/categories').then((r) => r.json()),
         fetch('/api/orders').then((r) => r.json()),
-        fetch('/api/pharmacists').then((r) => r.json()),
         fetch('/api/chats').then((r) => r.json()),
         fetch(`/api/chats/usr-client-sim/messages`).then((r) => r.json().catch(() => []))
       ]);
@@ -62,7 +60,6 @@ export default function App() {
       if (Array.isArray(resProd)) setProducts(resProd);
       if (Array.isArray(resCat)) setCategories(resCat);
       if (Array.isArray(resOrders)) setOrders(resOrders);
-      if (Array.isArray(resPharm)) setPharmacists(resPharm);
       if (Array.isArray(resChats)) setChats(resChats);
       if (Array.isArray(resMessages)) setMessages(resMessages);
     } catch (err) {
@@ -76,19 +73,14 @@ export default function App() {
   }, [currentUser.role]);
 
   // Handle Dynamic Simulated user role switcher
-  const handleRoleChange = (role: 'client' | 'pharmacist' | 'admin') => {
+  const handleRoleChange = (role: 'client' | 'admin') => {
     let name = 'Awa Diop';
     let phone = '0701020304';
     let email = 'awa.diop@gmail.com';
     let id = 'usr-client-sim';
 
-    if (role === 'pharmacist') {
-      name = 'Dr. Akissi Kouamé (Praticien)';
-      phone = '0505101520';
-      email = 'akissi.kouame@gmail.com';
-      id = 'usr-pharmacist-sim';
-    } else if (role === 'admin') {
-      name = 'Directeur Gérant Abidjan';
+    if (role === 'admin') {
+      name = 'Responsable Boutique';
       phone = '0140203040';
       email = 'admin@cosmetiques.ci';
       id = 'usr-admin-sim';
@@ -110,8 +102,6 @@ export default function App() {
     // Auto-migrate tab to fit role context
     if (role === 'admin') {
       setActiveTab('admin');
-    } else if (role === 'pharmacist') {
-      setActiveTab('pharmacist');
     } else {
       setActiveTab('catalog');
     }
@@ -172,8 +162,8 @@ export default function App() {
 
   // Communication message dispatcher
   const handleSendMessage = async (chatId: string, text: string) => {
-    const senderRole = currentUser.role === 'client' ? 'client' : 'pharmacist';
-    const senderName = currentUser.role === 'client' ? currentUser.name : 'Dr. Akissi';
+    const senderRole = currentUser.role === 'client' ? 'client' : 'admin';
+    const senderName = currentUser.role === 'client' ? currentUser.name : 'Responsable Boutique';
 
     try {
       const response = await fetch(`/api/chats/${chatId}/messages`, {
@@ -208,15 +198,15 @@ export default function App() {
     }
   };
 
-  // Pharmacist injects product prescription directly to chat
+  // Administration recommendation injected directly to chat
   const handleSendPharmacistPrescription = async (chatId: string, productId: string) => {
     const response = await fetch(`/api/chats/${chatId}/messages`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        sender: 'pharmacist',
-        senderName: 'Dr. Akissi Kouamé',
-        message: 'Je vous recommande chaudement d\'inclure ce cosmétique dans votre routine quotidienne.',
+        sender: 'admin',
+        senderName: 'Responsable Boutique',
+        message: "Je vous recommande vivement d'intégrer ce produit cosmétique dans votre routine beauté quotidienne.",
         suggestedProductIds: [productId]
       })
     });
@@ -261,27 +251,6 @@ export default function App() {
     if (res.ok) loadData();
   };
 
-  const handleAddPharmacist = async (pharmPayload: Omit<Pharmacist, 'id' | 'active'>) => {
-    const res = await fetch('/api/pharmacists', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(pharmPayload)
-    });
-    if (res.ok) loadData();
-  };
-
-  const handleTogglePharmacistState = async (pharmId: string) => {
-    const phObj = pharmacists.find((p) => p.id === pharmId);
-    if (phObj) {
-      const res = await fetch(`/api/pharmacists/${pharmId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ active: !phObj.active })
-      });
-      if (res.ok) loadData();
-    }
-  };
-
   const cartTotalCount = cart.reduce((count, item) => count + item.quantity, 0);
 
   return (
@@ -317,7 +286,7 @@ export default function App() {
           />
         )}
 
-        {(activeTab === 'chat' || activeTab === 'pharmacist') && (
+        {activeTab === 'chat' && (
           <PharmacistChat
             currentUser={currentUser}
             products={products}
@@ -334,15 +303,12 @@ export default function App() {
           <AdminPanel
             products={products}
             orders={orders}
-            pharmacists={pharmacists}
             users={users}
             categories={categories}
             onAddProduct={handleAddProduct}
             onUpdateProduct={handleUpdateProduct}
             onDeleteProduct={handleDeleteProduct}
             onUpdateOrderStatus={handleUpdateOrderStatus}
-            onAddPharmacist={handleAddPharmacist}
-            onTogglePharmacistState={handleTogglePharmacistState}
           />
         )}
       </main>
@@ -397,7 +363,7 @@ export default function App() {
 
                 <div className="border-t border-rose-50 pt-3">
                   <h4 className="text-[10px] uppercase font-mono tracking-widest font-black text-zinc-400 mb-1">
-                    Description & Composition Clinique :
+                    Description & Conseils d'Utilisation :
                   </h4>
                   <p className="text-xs text-zinc-650 leading-relaxed font-normal">
                     {selectedProduct.description}
@@ -408,7 +374,7 @@ export default function App() {
                 <div className="p-3 bg-zinc-50 border rounded-2xl flex items-center space-x-2.5">
                   <span className="text-lg">🌿</span>
                   <p className="text-[10px] text-zinc-500 leading-normal">
-                    Formulé biologiquement, testé cliniquement en parapharmacie pour le teint et cuir chevelu en Côte d'Ivoire. Sans perturbateurs endocriniens.
+                    Formulé sans perturbateurs endocriniens, idéal pour sublimer et nourrir la peau sous le climat chaud et humide de l'Afrique de l'Ouest.
                   </p>
                 </div>
 
@@ -458,11 +424,11 @@ export default function App() {
       <footer className="bg-zinc-900 text-zinc-400 py-8 border-t border-zinc-800 text-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center sm:text-left flex flex-col sm:flex-row justify-between items-center gap-4">
           <div>
-            <p className="font-bold text-zinc-200">Akwaba PharmaSkin Côte d'Ivoire — Boutique Centrale Unique</p>
-            <p className="text-[10px] text-zinc-500 mt-1">Conçu en conformité avec les règles d'exercice de la parapharmacie ivoirienne. Réhabilitation de la barrière épidermique.</p>
+            <p className="font-bold text-zinc-200 font-sans">Akwaba Beauté Côte d'Ivoire — Boutique en Ligne</p>
+            <p className="text-[10px] text-zinc-500 mt-1">Votre destination privilégiée pour les produits de beauté et de soins cosmétiques de qualité en Côte d'Ivoire.</p>
           </div>
           <div className="font-mono text-[10px] text-zinc-500 text-center sm:text-right">
-            <p>Monnaie d'exercice: Franc CFA (XOF)</p>
+            <p>Devise: Franc CFA (XOF)</p>
             <p className="mt-0.5">© 2026 Abidjan, Côte d'Ivoire. All rights reserved.</p>
           </div>
         </div>

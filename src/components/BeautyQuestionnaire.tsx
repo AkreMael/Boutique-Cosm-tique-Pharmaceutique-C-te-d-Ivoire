@@ -158,7 +158,7 @@ export default function BeautyQuestionnaire({
             
             <h3 className="text-2xl font-bold text-rose-950 mb-2">Comprendre votre Peau & vos Cheveux</h3>
             <p className="text-zinc-500 max-w-lg mb-8 leading-relaxed">
-              Que vous habitiez dans l'humidité lagunaire d'Abidjan, sous les rayons de San Pedro ou face à l'Harmatan sec de Korhogo, vos cellules réagissent différemment. Obtenez une ordonnance claire de cosmétiques sains rédigée par nos algorithmes cliniques.
+              Que vous habitiez dans l'humidité lagunaire d'Abidjan, sous les rayons de San Pedro ou face à l'Harmattan sec de Korhogo, vos cellules réagissent différemment. Obtenez des conseils personnalisés de cosmétiques sains rédigés par notre conseiller IA d'Akwaba Beauté.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-2xl mb-8 text-left">
@@ -167,12 +167,12 @@ export default function BeautyQuestionnaire({
                 <p className="text-xs text-zinc-500 mt-1">Simple, rapide et instructif pour toute la famille.</p>
               </div>
               <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-150">
-                <p className="font-semibold text-rose-900 text-sm">💡 Diagnostics IA & Cliniques</p>
-                <p className="text-xs text-zinc-500 mt-1">Calculé à l'aide de modèles d'intelligence dermatologique.</p>
+                <p className="font-semibold text-rose-900 text-sm">💡 Diagnose IA Beauté</p>
+                <p className="text-xs text-zinc-500 mt-1">Calculé grâce à une intelligence artificielle dermo-cosmétique.</p>
               </div>
               <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-150">
-                <p className="font-semibold text-rose-900 text-sm">🛍️ Ordonnance Produits</p>
-                <p className="text-xs text-zinc-500 mt-1">Liez uniquement les cosmétiques disponibles en rayon ici.</p>
+                <p className="font-semibold text-rose-900 text-sm">🛍️ Routine Idéale</p>
+                <p className="text-xs text-zinc-500 mt-1">Lyz uniquement les cosmétiques disponibles en rayon ici.</p>
               </div>
             </div>
 
@@ -448,10 +448,10 @@ export default function BeautyQuestionnaire({
 
             </div>
 
-            {/* General Clinique Advice & Recommendations */}
+            {/* General Beauty Advice & Recommendations */}
             <div className="bg-white rounded-3xl p-6 shadow-md border border-zinc-150">
               <h4 className="text-xs uppercase font-mono tracking-widest font-extrabold text-rose-950 mb-3 block">
-                🌱 Conseils Pédiatriques et Cliniques Généraux :
+                🌱 Conseils de Routine Généraux :
               </h4>
               <ul className="space-y-2.5">
                 {currentResult.conseilsGeneraux?.map((conseil: string, idx: number) => (
@@ -495,21 +495,21 @@ export default function BeautyQuestionnaire({
               </div>
             )}
 
-            {/* Quick Consultation Pharmacien Call out */}
-            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100 rounded-3xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center space-x-3 text-emerald-950">
-                <div className="bg-emerald-500 text-white p-2.5 rounded-full">
-                  <ShieldCheck className="h-5 w-5" />
+            {/* Quick Consultation Call out */}
+            <div className="bg-gradient-to-r from-rose-50 to-rose-100/50 border border-rose-100 rounded-3xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center space-x-3 text-rose-950">
+                <div className="bg-rose-600 text-white p-2.5 rounded-full">
+                  <Heart className="h-5 w-5" />
                 </div>
                 <div>
-                  <h5 className="font-bold text-sm">Discuter directement avec un Pharmacien ?</h5>
-                  <p className="text-xs text-emerald-800">Nos pharmaciens professionnels agréés en Côte d'Ivoire vous orientent gratuitement.</p>
+                  <h5 className="font-bold text-sm">Besoin d'un conseil personnalisé ?</h5>
+                  <p className="text-xs text-rose-800">Notre assistante d'Akwaba Beauté vous guide gratuitement en direct.</p>
                 </div>
               </div>
               
               <a
                 href="#chat-panel"
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-md transition"
+                className="px-4 py-2 bg-rose-950 hover:bg-rose-900 text-white font-semibold text-xs rounded-xl shadow-md transition"
               >
                 Ouvrir la Discussion
               </a>
