@@ -1,0 +1,6 @@
+{
+  "name": "Boutique Cosmétique & Parapharmacie CI",
+  "description": "Boutique de dermo-cosmétique ivoirienne de vente en ligne avec conseils de pharmaciens, paiement Mobile Money et diagnostic de peau intelligent.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
