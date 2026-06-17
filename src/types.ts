@@ -38,6 +38,7 @@ export interface User {
   city: string;
   address: string;
   role: 'client' | 'admin';
+  username?: string;
   skinProfile?: BeautyProfile;
 }
 

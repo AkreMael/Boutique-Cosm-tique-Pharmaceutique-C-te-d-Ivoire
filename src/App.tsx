@@ -5,168 +5,254 @@ import BeautyQuestionnaire from './components/BeautyQuestionnaire';
 import PharmacistChat from './components/PharmacistChat';
 import Cart from './components/Cart';
 import AdminPanel from './components/AdminPanel';
+import LoginScreen from './components/LoginScreen';
 import { Product, Category, User, CartItem, Order, ChatSession, ChatMessage, BeautyProfile } from './types';
 import { HeartPulse, Plus, Check, Star, X, Shield, Info, ShoppingBag } from 'lucide-react';
+import { db, collection, doc, onSnapshot, setDoc, query, where, authenticateAnonymous } from './lib/firebase';
 
 export default function App() {
   // Navigation tabs
   const [activeTab, setActiveTab] = useState<string>('catalog');
 
-  // Backend Synchronized States
+  // Authentication & Loading States
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  // Firestore Live States
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [chats, setChats] = useState<ChatSession[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [users, setUsers] = useState<User[]>([
-    {
-      id: 'usr-client-sim',
-      name: 'Awa Diop',
-      phone: '0701020304',
-      email: 'awa.diop@gmail.com',
-      city: 'Abidjan',
-      address: 'Riviera Bonoumin, Boulevard Latrille',
-      role: 'client'
-    }
-  ]);
-  
-  // Shopping Cart & Overlays
+  const [users, setUsers] = useState<User[]>([]);
+
+  // Local UI States
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
-  // Authentication state simulation
-  const [currentUser, setCurrentUser] = useState<User>({
-    id: 'usr-client-sim',
-    name: 'Awa Diop',
-    phone: '0701020304',
-    email: 'awa.diop@gmail.com',
-    city: 'Abidjan',
-    address: 'Riviera Bonoumin, Boulevard Latrille',
-    role: 'client'
-  });
-
-  // Fetch initial collections
-  const loadData = async () => {
-    try {
-      const [resProd, resCat, resOrders, resChats, resMessages] = await Promise.all([
-        fetch('/api/products').then((r) => r.json()),
-        fetch('/api/categories').then((r) => r.json()),
-        fetch('/api/orders').then((r) => r.json()),
-        fetch('/api/chats').then((r) => r.json()),
-        fetch(`/api/chats/usr-client-sim/messages`).then((r) => r.json().catch(() => []))
-      ]);
-
-      if (Array.isArray(resProd)) setProducts(resProd);
-      if (Array.isArray(resCat)) setCategories(resCat);
-      if (Array.isArray(resOrders)) setOrders(resOrders);
-      if (Array.isArray(resChats)) setChats(resChats);
-      if (Array.isArray(resMessages)) setMessages(resMessages);
-    } catch (err) {
-      console.error('Failure to load full-stack collections, using static fallback routines', err);
-    }
-  };
-
+  // 1. Initial configuration check: load logged-in user session
   useEffect(() => {
-    loadData();
-    // Refresh stats and databases on user role shifts to ensure consistency
-  }, [currentUser.role]);
-
-  // Handle Dynamic Simulated user role switcher
-  const handleRoleChange = (role: 'client' | 'admin') => {
-    let name = 'Awa Diop';
-    let phone = '0701020304';
-    let email = 'awa.diop@gmail.com';
-    let id = 'usr-client-sim';
-
-    if (role === 'admin') {
-      name = 'Responsable Boutique';
-      phone = '0140203040';
-      email = 'admin@cosmetiques.ci';
-      id = 'usr-admin-sim';
-    }
-
-    const updatedUser: User = {
-      id,
-      name,
-      phone,
-      email,
-      city: 'Abidjan',
-      address: 'Cocody Ambassades',
-      role,
-      skinProfile: currentUser.skinProfile
-    };
-
-    setCurrentUser(updatedUser);
-    
-    // Auto-migrate tab to fit role context
-    if (role === 'admin') {
-      setActiveTab('admin');
-    } else {
-      setActiveTab('catalog');
-    }
-  };
-
-  // E-commerce Shopping Cart Reducers
-  const handleAddToCart = (product: Product) => {
-    setCart((prevCart) => {
-      const existing = prevCart.find((item) => item.product.id === product.id);
-      if (existing) {
-        return prevCart.map((item) =>
-          item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
-        );
+    const cached = localStorage.getItem('akwaba_user');
+    if (cached) {
+      try {
+        const parsed: User = JSON.parse(cached);
+        setCurrentUser(parsed);
+        if (parsed.role === 'admin') {
+          setActiveTab('admin');
+        } else {
+          setActiveTab('catalog');
+        }
+        // Authenticate anonymously in background to solve FireStore 'auth != null' condition
+        authenticateAnonymous().catch((err) => {
+          console.error("Silent anonymous login fail:", err);
+        });
+      } catch {
+        localStorage.removeItem('akwaba_user');
       }
-      return [...prevCart, { product, quantity: 1 }];
-    });
+    }
+    setLoading(false);
+  }, []);
+
+  // 2. Real-Time Cloud Firestore Continuous Subscriptions
+  useEffect(() => {
+    if (!currentUser) return;
+
+    // 1) Subscribe to Products Collection
+    const unsubProducts = onSnapshot(collection(db, "products"), (snap) => {
+      const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+      setProducts(list);
+    }, (err) => console.error("Realtime Products Subscribe error:", err));
+
+    // 2) Subscribe to Categories Collection
+    const unsubCategories = onSnapshot(collection(db, "categories"), (snap) => {
+      const list = snap.docs.map(doc => doc.data() as Category);
+      setCategories(list);
+    }, (err) => console.error("Realtime Categories Subscribe error:", err));
+
+    // 3) Subscribe to Orders Collection (Secure separation)
+    const oQuery = currentUser.role === 'admin'
+      ? collection(db, "orders")
+      : query(collection(db, "orders"), where("userId", "==", currentUser.id));
+
+    const unsubOrders = onSnapshot(oQuery, (snap) => {
+      const list = snap.docs.map(doc => doc.data() as Order);
+      list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      setOrders(list);
+    }, (err) => console.error("Realtime Orders Subscribe error:", err));
+
+    // 4) Subscribe to Chat Sessions Collection (Secure separation)
+    const cQuery = currentUser.role === 'admin'
+      ? collection(db, "chats")
+      : query(collection(db, "chats"), where("id", "==", currentUser.id));
+
+    const unsubChats = onSnapshot(cQuery, (snap) => {
+      const list = snap.docs.map(doc => doc.data() as ChatSession);
+      setChats(list);
+    }, (err) => console.error("Realtime Chats Subscribe error:", err));
+
+    // 5) Subscribe to Global Users List (Only for Admin to display Client names, profiles and statistics)
+    let unsubUsers = () => {};
+    if (currentUser.role === 'admin') {
+      unsubUsers = onSnapshot(collection(db, "users"), (snap) => {
+        const list = snap.docs.map(doc => doc.data() as User);
+        setUsers(list);
+      }, (err) => console.error("Realtime Users Subscribe error:", err));
+    }
+
+    // 6) Subscribe to User Basket/Cart dynamically linked to db
+    let unsubCart = () => {};
+    if (currentUser.role === 'client') {
+      unsubCart = onSnapshot(doc(db, "carts", currentUser.id), (docSnap) => {
+        if (docSnap.exists()) {
+          setCart(docSnap.data().items || []);
+        }
+      }, (err) => console.error("Realtime Cart sync error:", err));
+    }
+
+    return () => {
+      unsubProducts();
+      unsubCategories();
+      unsubOrders();
+      unsubChats();
+      unsubUsers();
+      unsubCart();
+    };
+  }, [currentUser]);
+
+  // 3. Real-Time Chat messages sync
+  useEffect(() => {
+    if (!currentUser) return;
+
+    // Listen to ALL messages so chat feeds can filter them instantly in real time
+    const unsubMessages = onSnapshot(collection(db, "messages"), (snap) => {
+      const list = snap.docs.map(doc => doc.data() as ChatMessage);
+      list.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      setMessages(list);
+    }, (err) => console.error("Realtime Messages Subscribe error:", err));
+
+    return () => {
+      unsubMessages();
+    };
+  }, [currentUser]);
+
+  // Handle Authentication submit
+  const handleLogin = async (userPayload: User) => {
+    try {
+      // Connect to Firestore auth anonymously
+      await authenticateAnonymous();
+
+      // Exchange details with express to retrieve profile or persist credentials
+      const res = await fetch('/api/users/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userPayload)
+      });
+      const synchronizedUser: User = res.ok ? await res.json() : userPayload;
+
+      // Persist profile to Firestore users list
+      await setDoc(doc(db, "users", synchronizedUser.id), synchronizedUser, { merge: true });
+
+      // Save locally
+      localStorage.setItem('akwaba_user', JSON.stringify(synchronizedUser));
+      setCurrentUser(synchronizedUser);
+
+      if (synchronizedUser.role === 'admin') {
+        setActiveTab('admin');
+      } else {
+        setActiveTab('catalog');
+      }
+    } catch (err) {
+      console.error("Authentication handshake failure:", err);
+    }
   };
 
-  const handleUpdateCartQuantity = (productId: string, quantity: number) => {
-    setCart((prevCart) =>
-      prevCart.map((item) =>
-        item.product.id === productId ? { ...item, quantity } : item
-      )
-    );
-  };
-
-  const handleRemoveFromCart = (productId: string) => {
-    setCart((prevCart) => prevCart.filter((item) => item.product.id !== productId));
-  };
-
-  const handleClearCart = () => {
+  const handleLogout = () => {
+    localStorage.removeItem('akwaba_user');
+    setCurrentUser(null);
     setCart([]);
   };
 
-  // Callback on simulated Mobile Money success checkout
+  // E-commerce Cart Operations with synchronous database replication
+  const syncCartWithDb = async (newCart: CartItem[]) => {
+    setCart(newCart);
+    if (currentUser && currentUser.role === 'client') {
+      try {
+        await setDoc(doc(db, "carts", currentUser.id), { items: newCart }, { merge: true });
+      } catch (err) {
+        console.error("Failed to sync cart to Firestore:", err);
+      }
+    }
+  };
+
+  const handleAddToCart = (product: Product) => {
+    let updatedCart: CartItem[] = [];
+    const existing = cart.find((item) => item.product.id === product.id);
+    if (existing) {
+      updatedCart = cart.map((item) =>
+        item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+      );
+    } else {
+      updatedCart = [...cart, { product, quantity: 1 }];
+    }
+    syncCartWithDb(updatedCart);
+  };
+
+  const handleUpdateCartQuantity = (productId: string, quantity: number) => {
+    const updatedCart = cart.map((item) =>
+      item.product.id === productId ? { ...item, quantity } : item
+    );
+    syncCartWithDb(updatedCart);
+  };
+
+  const handleRemoveFromCart = (productId: string) => {
+    const updatedCart = cart.filter((item) => item.product.id !== productId);
+    syncCartWithDb(updatedCart);
+  };
+
+  const handleClearCart = () => {
+    syncCartWithDb([]);
+  };
+
+  // Checkout complete orders
   const handleOrderCreated = (newOrder: Order) => {
     setOrders((prev) => [newOrder, ...prev]);
-    // refresh logs
-    loadData();
+    handleClearCart();
   };
 
-  // Questionnaire diagnostic profile save callback
-  const handleSaveBeautyProfile = (profile: BeautyProfile, diagnosticResult: any) => {
-    setCurrentUser((prev) => ({
-      ...prev,
+  // Beauty profile customized routine diagnostic saving
+  const handleSaveBeautyProfile = async (profile: BeautyProfile, diagnosticResult: any) => {
+    if (!currentUser) return;
+    const updatedUser: User = {
+      ...currentUser,
       skinProfile: profile
-    }));
-    // save beauty profile to db on server
-    fetch(`/api/users/${currentUser.id}/profile`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...currentUser,
-        skinProfile: profile
-      })
-    }).then(() => loadData());
-  };
-
-  // Communication message dispatcher
-  const handleSendMessage = async (chatId: string, text: string) => {
-    const senderRole = currentUser.role === 'client' ? 'client' : 'admin';
-    const senderName = currentUser.role === 'client' ? currentUser.name : 'Responsable Boutique';
+    };
+    setCurrentUser(updatedUser);
+    localStorage.setItem('akwaba_user', JSON.stringify(updatedUser));
 
     try {
-      const response = await fetch(`/api/chats/${chatId}/messages`, {
+      // Synchronize back to database
+      await setDoc(doc(db, "users", currentUser.id), updatedUser, { merge: true });
+      
+      // Hit profile express endpoint for record consistency
+      await fetch(`/api/users/${currentUser.id}/profile`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedUser)
+      });
+    } catch (err) {
+      console.error("Beauty profile sync error:", err);
+    }
+  };
+
+  // Chat conversation messenger API dispatch
+  const handleSendMessage = async (chatId: string, text: string) => {
+    if (!currentUser) return;
+    const senderRole = currentUser.role === 'client' ? 'client' : 'admin';
+    const senderName = currentUser.name;
+
+    try {
+      await fetch(`/api/chats/${chatId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -175,131 +261,133 @@ export default function App() {
           message: text
         })
       });
-      
-      if (!response.ok) throw new Error();
-      const updatedMessages = await response.json();
-      setMessages(updatedMessages);
-      
-      // reload chat session counts
-      const resChats = await fetch('/api/chats').then((r) => r.json());
-      setChats(resChats);
     } catch (err) {
-      console.error(err);
-      // fallback message update locally
-      const fallbackMsg: ChatMessage = {
-        id: `msg-${Date.now()}`,
+      console.error("Chat sync failed, appending message client-side fallback", err);
+      // Fallback local append back to Firestore messages directly
+      const fallbackMsgId = `msg-${Date.now()}`;
+      await setDoc(doc(db, "messages", fallbackMsgId), {
+        id: fallbackMsgId,
         chatId,
         sender: senderRole,
         senderName,
         message: text,
         timestamp: new Date().toISOString()
-      };
-      setMessages((prev) => [...prev, fallbackMsg]);
+      });
     }
   };
 
-  // Administration recommendation injected directly to chat
+  // Dispatch product recommendations in-chat
   const handleSendPharmacistPrescription = async (chatId: string, productId: string) => {
-    const response = await fetch(`/api/chats/${chatId}/messages`, {
+    if (!currentUser) return;
+    await fetch(`/api/chats/${chatId}/messages`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         sender: 'admin',
-        senderName: 'Responsable Boutique',
+        senderName: currentUser.name,
         message: "Je vous recommande vivement d'intégrer ce produit cosmétique dans votre routine beauté quotidienne.",
         suggestedProductIds: [productId]
       })
     });
-    if (response.ok) {
-      const updatedMessages = await response.json();
-      setMessages(updatedMessages);
-    }
   };
 
-  // Administration interactions callbacks to database
+  // Admin operational actions
   const handleAddProduct = async (prodPayload: Omit<Product, 'id' | 'dateAdded'>) => {
-    const res = await fetch('/api/products', {
+    await fetch('/api/products', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(prodPayload)
     });
-    if (res.ok) loadData();
   };
 
   const handleUpdateProduct = async (updatedProd: Product) => {
-    const res = await fetch(`/api/products/${updatedProd.id}`, {
+    await fetch(`/api/products/${updatedProd.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updatedProd)
     });
-    if (res.ok) loadData();
   };
 
   const handleDeleteProduct = async (prodId: string) => {
-    const res = await fetch(`/api/products/${prodId}`, {
+    await fetch(`/api/products/${prodId}`, {
       method: 'DELETE'
     });
-    if (res.ok) loadData();
   };
 
   const handleUpdateOrderStatus = async (orderId: string, status: Order['status']) => {
-    const res = await fetch(`/api/orders/${orderId}/status`, {
+    await fetch(`/api/orders/${orderId}/status`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status })
     });
-    if (res.ok) loadData();
   };
+
+  // Loading spinner view
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-rose-50/20 flex flex-col items-center justify-center font-sans">
+        <div className="h-12 w-12 rounded-full border-4 border-rose-500 border-t-transparent animate-spin"></div>
+        <p className="text-xs font-mono text-rose-950 mt-4 tracking-widest uppercase">Akwaba Beauté • Chargement...</p>
+      </div>
+    );
+  }
+
+  // Mandatory Authentication Redirect
+  if (!currentUser) {
+    return <LoginScreen onLogin={handleLogin} />;
+  }
 
   const cartTotalCount = cart.reduce((count, item) => count + item.quantity, 0);
 
   return (
-    <div className="min-h-screen bg-zinc-50 flex flex-col font-sans">
+    <div className="min-h-screen bg-zinc-50 flex flex-col font-sans relative selection:bg-rose-100">
       
       {/* 1. HEADER */}
       <Header
         currentUser={currentUser}
         cart={cart}
         cartCount={cartTotalCount}
-        onRoleChange={handleRoleChange}
+        onLogout={handleLogout}
         onOpenCart={() => setIsCartOpen(true)}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
       />
 
-      {/* 2. CORE ROUTE VIEWS */}
+      {/* 2. CORE RENDERING ENGINE */}
       <main className="flex-1">
-        {activeTab === 'catalog' && (
-          <Catalog
-            products={products}
-            categories={categories}
-            onAddToCart={handleAddToCart}
-            onSelectProductDetails={(product) => setSelectedProduct(product)}
-          />
-        )}
+        {currentUser.role === 'client' ? (
+          <>
+            {activeTab === 'catalog' && (
+              <Catalog
+                products={products}
+                categories={categories}
+                onAddToCart={handleAddToCart}
+                onSelectProductDetails={(product) => setSelectedProduct(product)}
+              />
+            )}
 
-        {activeTab === 'diagnostic' && (
-          <BeautyQuestionnaire
-            currentProfile={currentUser.skinProfile}
-            products={products}
-            onSaveProfile={handleSaveBeautyProfile}
-          />
-        )}
+            {activeTab === 'diagnostic' && (
+              <BeautyQuestionnaire
+                currentProfile={currentUser.skinProfile}
+                products={products}
+                onSaveProfile={handleSaveBeautyProfile}
+              />
+            )}
 
-        {activeTab === 'chat' && (
-          <PharmacistChat
-            currentUser={currentUser}
-            products={products}
-            currentProfile={currentUser.skinProfile}
-            chats={chats}
-            messages={messages}
-            onSendMessage={handleSendMessage}
-            onSendPharmacistPrescription={handleSendPharmacistPrescription}
-            onAddToCart={handleAddToCart}
-          />
-        )}
-
-        {activeTab === 'admin' && currentUser.role === 'admin' && (
+            {activeTab === 'chat' && (
+              <PharmacistChat
+                currentUser={currentUser}
+                products={products}
+                currentProfile={currentUser.skinProfile}
+                chats={chats}
+                messages={messages}
+                onSendMessage={handleSendMessage}
+                onSendPharmacistPrescription={handleSendPharmacistPrescription}
+                onAddToCart={handleAddToCart}
+              />
+            )}
+          </>
+        ) : (
           <AdminPanel
             products={products}
             orders={orders}
@@ -323,24 +411,25 @@ export default function App() {
             className="fixed inset-0 bg-zinc-950/70 backdrop-blur-xs"
           ></div>
           <div className="flex items-center justify-center min-h-screen p-4 z-55 relative">
-            <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl text-left border border-rose-50 flex flex-col">
+            <div className="bg-white rounded-[2rem] max-w-lg w-full overflow-hidden shadow-2xl text-left border border-rose-50 flex flex-col animate-scale-up">
               
               {/* Product Header image cover */}
               <div className="relative h-64 bg-zinc-100 shrink-0">
                 <img 
+                  referrerPolicy="no-referrer"
                   src={selectedProduct.images[0]} 
                   alt={selectedProduct.name} 
                   className="h-full w-full object-cover"
                 />
                 <button 
                   onClick={() => setSelectedProduct(null)}
-                  className="absolute top-4 right-4 p-2 bg-zinc-900/40 hover:bg-zinc-900/60 rounded-full text-white transition-opacity"
+                  className="absolute top-4 right-4 p-2.5 bg-zinc-900/40 hover:bg-zinc-900/60 rounded-full text-white transition cursor-pointer"
                 >
-                  <X className="h-5 w-5" />
+                  <X className="h-4 w-4" />
                 </button>
               </div>
 
-              {/* Product Card Details bio */}
+              {/* Product Card Details */}
               <div className="p-6 space-y-4">
                 <div className="flex items-center justify-between text-xs font-mono font-bold uppercase tracking-wider text-rose-800">
                   <span>Marque CI: {selectedProduct.brand}</span>
@@ -365,7 +454,7 @@ export default function App() {
                   <h4 className="text-[10px] uppercase font-mono tracking-widest font-black text-zinc-400 mb-1">
                     Description & Conseils d'Utilisation :
                   </h4>
-                  <p className="text-xs text-zinc-650 leading-relaxed font-normal">
+                  <p className="text-xs text-zinc-600 leading-relaxed font-normal">
                     {selectedProduct.description}
                   </p>
                 </div>
@@ -421,7 +510,7 @@ export default function App() {
       />
 
       {/* 4. FOOTER CREDITS */}
-      <footer className="bg-zinc-900 text-zinc-400 py-8 border-t border-zinc-800 text-xs">
+      <footer className="bg-zinc-900 text-zinc-400 py-8 border-t border-zinc-800 text-xs mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center sm:text-left flex flex-col sm:flex-row justify-between items-center gap-4">
           <div>
             <p className="font-bold text-zinc-200 font-sans">Akwaba Beauté Côte d'Ivoire — Boutique en Ligne</p>

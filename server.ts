@@ -4,6 +4,7 @@ import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from "dotenv";
+import * as admin from 'firebase-admin';
 
 // Load environment variables
 dotenv.config();
@@ -13,7 +14,27 @@ const app = express();
 app.use(express.json());
 
 const PORT = 3000;
-const DB_FILE = path.join(process.cwd(), "db_cosmetics_ci.json");
+
+// Initialize Firebase Admin SDK using application credentials or local project configuration
+let adminDb: admin.firestore.Firestore;
+try {
+  const configPath = path.join(process.cwd(), "firebase-applet-config.json");
+  let projectId = "filant225-base";
+  if (fs.existsSync(configPath)) {
+    const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+    projectId = config.projectId || projectId;
+  }
+  
+  if (admin.apps.length === 0) {
+    admin.initializeApp({
+      projectId: projectId
+    });
+  }
+  adminDb = admin.firestore();
+  console.log("Firebase admin SDK initialized with Cloud Project ID:", projectId);
+} catch (error) {
+  console.error("Firebase admin initialization error:", error);
+}
 
 // Initialize Gemini Client safely
 let ai: GoogleGenAI | null = null;
@@ -31,7 +52,7 @@ if (process.env.GEMINI_API_KEY) {
   console.warn("GEMINI_API_KEY is not defined. Skincare diagnosis and conversational pharmacist replies will use high-quality, pre-defined expert templates.");
 }
 
-// Ensure Database File Exists & Seed with authentic Ivorian items
+// Authentic initial seed items for Côte d'Ivoire
 const SEED_PRODUCTS = [
   {
     id: "prod-1",
@@ -185,37 +206,21 @@ const SEED_CATEGORIES = [
 
 const SEED_USERS = [
   {
-    id: "admin-1",
-    name: "Responsable Boutique Abidjan",
-    phone: "0707070707",
-    email: "admin@cosmetiques.ci",
-    city: "Abidjan",
-    address: "Cocody Ambassades",
+    id: "usr-admin-mael",
+    name: "Maël",
+    phone: "07 05 05 26 32",
+    email: "mael@cosmetiques.ci",
+    city: "Cocody",
+    address: "Cocody, Abidjan",
     role: "admin"
-  },
-  {
-    id: "prive-1",
-    name: "Awa Diop",
-    phone: "0102030405",
-    email: "awa.diop@gmail.com",
-    city: "Abidjan",
-    address: "Zone 4, Rue des Alizés",
-    role: "client",
-    skinProfile: {
-      gender: "Femme",
-      age: 28,
-      skinType: "Mixte",
-      hairType: "Crépu",
-      concerns: ["Taches", "Hydratation"]
-    }
   }
 ];
 
 const SEED_CHATS = [
   {
-    id: "prive-1",
+    id: "chat-ewa-sample",
     clientName: "Awa Diop",
-    clientPhone: "0102030405",
+    clientPhone: "+225 0701020304",
     lastMessage: "Bonjour, j'ai des taches d'acné récurrentes sur le visage, que me conseillez-vous ?",
     lastTimestamp: "2026-06-16T18:30:00Z",
     active: true,
@@ -226,7 +231,7 @@ const SEED_CHATS = [
 const SEED_MESSAGES = [
   {
     id: "msg-1",
-    chatId: "prive-1",
+    chatId: "chat-ewa-sample",
     sender: "client",
     senderName: "Awa Diop",
     message: "Bonjour, j'ai des taches d'acné récurrentes sur le visage, que me conseillez-vous ?",
@@ -237,10 +242,10 @@ const SEED_MESSAGES = [
 const SEED_ORDERS = [
   {
     id: "cmd-9012",
-    userId: "prive-1",
+    userId: "chat-ewa-sample",
     customerName: "Awa Diop",
-    customerPhone: "0102030405",
-    customerEmail: "awa.diop@gmail.com",
+    customerPhone: "+225 0701020304",
+    customerEmail: "awa@cosmetiques.ci",
     address: "Zone 4, Rue des Alizés, Abidjan",
     city: "Abidjan",
     items: [
@@ -250,399 +255,359 @@ const SEED_ORDERS = [
         price: 6000,
         quantity: 2,
         image: "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=600&auto=format&fit=crop"
-      },
-      {
-        productId: "prod-2",
-        name: "Gel Nettoyant Visage Anti-Imperfections",
-        price: 5000,
-        quantity: 1,
-        image: "https://images.unsplash.com/photo-1608248597481-496100c80836?q=80&w=600&auto=format&fit=crop"
       }
     ],
-    total: 17000,
+    total: 12000,
     status: "Confirmée",
     paymentMethod: "Orange Money",
     paymentStatus: "Payé",
     date: "2026-06-16T15:20:00Z"
-  },
-  {
-    id: "cmd-3456",
-    userId: "prive-1",
-    customerName: "Awa Diop",
-    customerPhone: "0102030405",
-    customerEmail: "awa.diop@gmail.com",
-    address: "Zone 4, Rue des Alizés, Apartment 4B",
-    city: "Abidjan",
-    items: [
-      {
-        productId: "prod-3",
-        name: "Sérum Concentré Éclat & Anti-Taches",
-        price: 10500,
-        quantity: 1,
-        image: "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=600&auto=format&fit=crop"
-      }
-    ],
-    total: 10500,
-    status: "En livraison",
-    paymentMethod: "MTN Money",
-    paymentStatus: "Payé",
-    date: "2026-06-17T01:00:00Z"
   }
 ];
 
-function initDatabase() {
-  if (!fs.existsSync(DB_FILE)) {
-    console.log("No existing database file found. Generating and pre-seeding...");
-    const db = {
-      products: SEED_PRODUCTS,
-      categories: SEED_CATEGORIES,
-      users: SEED_USERS,
-      chats: SEED_CHATS,
-      messages: SEED_MESSAGES,
-      orders: SEED_ORDERS,
-      statistics: {
-        newConversations: 1
-      },
-      settings: {
-        ai_pharmacist_enabled: true
+// Seed Firestore dynamically on startup
+async function initDatabase() {
+  if (!adminDb) return;
+  try {
+    const productsSnapshot = await adminDb.collection("products").get();
+    if (productsSnapshot.empty) {
+      console.log("Seeding Firestore products...");
+      for (const prod of SEED_PRODUCTS) {
+        await adminDb.collection("products").doc(prod.id).set(prod);
       }
-    };
-    fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), "utf-8");
-  } else {
-    // Validate if structure is correct
-    try {
-      const data = JSON.parse(fs.readFileSync(DB_FILE, "utf-8"));
-      if (!data.products || !data.chats || !data.messages) {
-        throw new Error("Missing collections");
-      }
-    } catch {
-      console.warn("Faulty db file, resetting database with premium seed data.");
-      const db = {
-        products: SEED_PRODUCTS,
-        categories: SEED_CATEGORIES,
-        users: SEED_USERS,
-        chats: SEED_CHATS,
-        messages: SEED_MESSAGES,
-        orders: SEED_ORDERS,
-        statistics: {
-          newConversations: 1
-        },
-        settings: {
-          ai_pharmacist_enabled: true
-        }
-      };
-      fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), "utf-8");
     }
+
+    const categoriesSnapshot = await adminDb.collection("categories").get();
+    if (categoriesSnapshot.empty) {
+      console.log("Seeding Firestore categories...");
+      for (const cat of SEED_CATEGORIES) {
+        await adminDb.collection("categories").doc(cat.slug).set(cat);
+      }
+    }
+
+    const usersSnapshot = await adminDb.collection("users").get();
+    if (usersSnapshot.empty) {
+      console.log("Seeding Admin user...");
+      for (const usr of SEED_USERS) {
+        await adminDb.collection("users").doc(usr.id).set(usr);
+      }
+    }
+
+    const chatsSnapshot = await adminDb.collection("chats").get();
+    if (chatsSnapshot.empty) {
+      console.log("Seeding initial chat logs...");
+      for (const ch of SEED_CHATS) {
+        await adminDb.collection("chats").doc(ch.id).set(ch);
+      }
+      for (const msg of SEED_MESSAGES) {
+        await adminDb.collection("messages").doc(msg.id).set(msg);
+      }
+    }
+
+    const ordersSnapshot = await adminDb.collection("orders").get();
+    if (ordersSnapshot.empty) {
+      console.log("Seeding sample orders...");
+      for (const o of SEED_ORDERS) {
+        await adminDb.collection("orders").doc(o.id).set(o);
+      }
+    }
+    
+    console.log("Firestore database fully seeded and synchronized.");
+  } catch (err) {
+    console.error("Firestore database seeding failed:", err);
   }
 }
 
+// Invoke seed verification
 initDatabase();
 
-// Helepers to read and write DB
-function getDB() {
-  initDatabase();
-  return JSON.parse(fs.readFileSync(DB_FILE, "utf-8"));
-}
-
-function writeDB(data: any) {
-  fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), "utf-8");
-}
-
 // ----------------------
-// API ROUTES
+// API ROUTES ENTIRELY MAPPED TO CLOUD FIRESTORE
 // ----------------------
 
 // 1. Products API
-app.get("/api/products", (req, res) => {
-  const db = getDB();
-  res.json(db.products);
-});
-
-app.post("/api/products", (req, res) => {
-  const db = getDB();
-  const newProduct = {
-    ...req.body,
-    id: `prod-${Date.now()}`,
-    dateAdded: new Date().toISOString()
-  };
-  db.products.push(newProduct);
-  writeDB(db);
-  res.status(201).json(newProduct);
-});
-
-app.put("/api/products/:id", (req, res) => {
-  const { id } = req.params;
-  const db = getDB();
-  const index = db.products.findIndex((p: any) => p.id === id);
-  if (index !== -1) {
-    db.products[index] = { ...db.products[index], ...req.body };
-    writeDB(db);
-    res.json(db.products[index]);
-  } else {
-    res.status(404).json({ error: "Produit non trouvé" });
+app.get("/api/products", async (req, res) => {
+  try {
+    const snapshot = await adminDb.collection("products").get();
+    const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    res.json(list);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
   }
 });
 
-app.delete("/api/products/:id", (req, res) => {
-  const { id } = req.params;
-  const db = getDB();
-  const index = db.products.findIndex((p: any) => p.id === id);
-  if (index !== -1) {
-    db.products.splice(index, 1);
-    writeDB(db);
+app.post("/api/products", async (req, res) => {
+  try {
+    const id = `prod-${Date.now()}`;
+    const newProduct = {
+      ...req.body,
+      id,
+      dateAdded: new Date().toISOString()
+    };
+    await adminDb.collection("products").doc(id).set(newProduct);
+    res.status(201).json(newProduct);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+app.put("/api/products/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    await adminDb.collection("products").doc(id).update(req.body);
+    const snap = await adminDb.collection("products").doc(id).get();
+    res.json({ id, ...snap.data() });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+app.delete("/api/products/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    await adminDb.collection("products").doc(id).delete();
     res.json({ message: "Produit supprimé avec succès" });
-  } else {
-    res.status(404).json({ error: "Produit non trouvé" });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
   }
 });
 
 // 2. Categories API
-app.get("/api/categories", (req, res) => {
-  const db = getDB();
-  res.json(db.categories);
+app.get("/api/categories", async (req, res) => {
+  try {
+    const snapshot = await adminDb.collection("categories").get();
+    const list = snapshot.docs.map(doc => doc.data());
+    res.json(list);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
 });
 
-// 3. User Authentication & Profile API (Simulated for this prototype with persistence)
-app.post("/api/users/login", (req, res) => {
-  const { email, phone, password } = req.body;
-  const db = getDB();
-  
-  // Find user by email or phone
-  const user = db.users.find((u: any) => {
-    if (email && u.email === email) return true;
-    if (phone && u.phone === phone) return true;
-    return false;
-  });
+// 3. Authentication & Profile API
+app.post("/api/users/login", async (req, res) => {
+  const { name, phone, city, username, role } = req.body;
+  try {
+    // If Admin Maël
+    if (role === "admin" && name.toLowerCase().trim() === "maël") {
+      const adminUser = {
+        id: "usr-admin-mael",
+        name: "Maël",
+        phone: "07 05 05 26 32",
+        email: "mael@cosmetiques.ci",
+        city: "Cocody",
+        address: "Cocody, Abidjan",
+        role: "admin"
+      };
+      await adminDb.collection("users").doc(adminUser.id).set(adminUser);
+      return res.json(adminUser);
+    }
 
-  if (user) {
-    res.json(user);
-  } else {
-    // Auto-create user dynamically so evaluation flows are completely friction-free!
-    const newUser = {
-      id: `usr-${Date.now()}`,
-      name: email ? email.split('@')[0] : "Client Ivoirien",
-      phone: phone || "0700112233",
-      email: email || "client@cosmetiques.ci",
-      city: "Abidjan",
-      address: "Angré Nouveau Horizon",
-      role: email === "admin@cosmetiques.ci" ? "admin" : "client"
+    // Client Lookup / Auto registration in Firestore
+    const usersSnap = await adminDb.collection("users").where("phone", "==", phone.trim()).get();
+    if (!usersSnap.empty) {
+      const existingUser = { id: usersSnap.docs[0].id, ...usersSnap.docs[0].data() };
+      return res.json(existingUser);
+    }
+
+    const newClientId = `usr-client-${Date.now()}`;
+    const newClient = {
+      id: newClientId,
+      name: name.trim(),
+      username: username ? username.trim() : name.toLowerCase().replace(/\s+/g, ""),
+      phone: phone.trim(),
+      email: `${(username || name).trim().toLowerCase()}@cosmetiques.ci`,
+      city: city || "Abidjan",
+      address: `${city || "Abidjan"}, Côte d'Ivoire`,
+      role: "client"
     };
-    db.users.push(newUser);
-    writeDB(db);
-    res.json(newUser);
+
+    await adminDb.collection("users").doc(newClientId).set(newClient);
+    res.status(201).json(newClient);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
   }
 });
 
-app.post("/api/users/register", (req, res) => {
-  const { name, phone, email, password } = req.body;
-  const db = getDB();
-  
-  const existing = db.users.find((u: any) => u.email === email || u.phone === phone);
-  if (existing) {
-    return res.json(existing);
-  }
-
-  const newUser = {
-    id: `usr-${Date.now()}`,
-    name,
-    phone,
-    email,
-    city: "Abidjan",
-    address: "Cocody Rivera Palmeraie",
-    role: "client"
-  };
-  db.users.push(newUser);
-  writeDB(db);
-  res.status(201).json(newUser);
-});
-
-app.put("/api/users/:id/profile", (req, res) => {
+app.put("/api/users/:id/profile", async (req, res) => {
   const { id } = req.params;
-  const { name, phone, email, city, address, skinProfile } = req.body;
-  const db = getDB();
-  const index = db.users.findIndex((u: any) => u.id === id);
-  
-  if (index !== -1) {
-    db.users[index] = { ...db.users[index], name, phone, email, city, address, skinProfile };
-    writeDB(db);
-    res.json(db.users[index]);
-  } else {
-    res.status(404).json({ error: "Utilisateur introuvable" });
+  try {
+    await adminDb.collection("users").doc(id).update(req.body);
+    const snap = await adminDb.collection("users").doc(id).get();
+    res.json({ id, ...snap.data() });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
   }
 });
 
 // 4. Pharmacy Advising Chat System (with Gemini intelligence + auto-replies)
-app.get("/api/chats", (req, res) => {
-  const db = getDB();
-  res.json(db.chats);
+app.get("/api/chats", async (req, res) => {
+  try {
+    const snapshot = await adminDb.collection("chats").orderBy("lastTimestamp", "desc").get();
+    const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    res.json(list);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
 });
 
-app.get("/api/chats/:chatId/messages", (req, res) => {
+app.get("/api/chats/:chatId/messages", async (req, res) => {
   const { chatId } = req.params;
-  const db = getDB();
-  const chatMessages = db.messages.filter((m: any) => m.chatId === chatId);
-  res.json(chatMessages);
+  try {
+    const snapshot = await adminDb.collection("messages").where("chatId", "==", chatId).get();
+    const list = snapshot.docs.map(doc => doc.data());
+    // Sort in code to bypass manual indexing crash alerts
+    list.sort((a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    res.json(list);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
 });
 
-// Send new chat message
 app.post("/api/chats/:chatId/messages", async (req, res) => {
   const { chatId } = req.params;
-  const { sender, senderName, message, imageUrl } = req.body;
-  const db = getDB();
+  const { sender, senderName, message, imageUrl, suggestedProductIds } = req.body;
+  
+  try {
+    // 1. Add User message
+    const msgId = `msg-${Date.now()}`;
+    const userMsg = {
+      id: msgId,
+      chatId,
+      sender,
+      senderName,
+      message,
+      timestamp: new Date().toISOString(),
+      ...(imageUrl && { imageUrl }),
+      ...(suggestedProductIds && { suggestedProductIds })
+    };
+    await adminDb.collection("messages").doc(msgId).set(userMsg);
 
-  // Create client message
-  const userMsg = {
-    id: `msg-${Date.now()}`,
-    chatId,
-    sender,
-    senderName,
-    message,
-    timestamp: new Date().toISOString(),
-    ...(imageUrl && { imageUrl })
-  };
-
-  db.messages.push(userMsg);
-
-  // Update session
-  let chatSession = db.chats.find((c: any) => c.id === chatId);
-  if (!chatSession) {
-    // Create new session
-    const customerUser = db.users.find((u: any) => u.id === chatId);
-    chatSession = {
+    // 2. Refresh Chat Session
+    const chatRef = adminDb.collection("chats").doc(chatId);
+    const chatDoc = await chatRef.get();
+    const hasUnread = sender === "client";
+    const sessionDetails = {
       id: chatId,
-      clientName: customerUser ? customerUser.name : senderName,
-      clientPhone: customerUser ? customerUser.phone : "0102030405",
+      clientName: sender === "client" ? senderName : (chatDoc.exists ? chatDoc.data()?.clientName : "Client"),
+      clientPhone: chatDoc.exists ? chatDoc.data()?.clientPhone : "",
       lastMessage: message,
       lastTimestamp: new Date().toISOString(),
       active: true,
-      unreadCount: 1
+      unreadCount: hasUnread ? ((chatDoc.exists ? (chatDoc.data()?.unreadCount || 0) : 0) + 1) : 0
     };
-    db.chats.push(chatSession);
-  } else {
-    chatSession.lastMessage = message;
-    chatSession.lastTimestamp = new Date().toISOString();
-    if (sender === "client") {
-      chatSession.unreadCount = (chatSession.unreadCount || 0) + 1;
-    } else {
-      chatSession.unreadCount = 0;
-    }
-  }
+    await chatRef.set(sessionDetails, { merge: true });
 
-  writeDB(db);
+    // 3. AI Pharmacist integration
+    const settingsDoc = await adminDb.collection("settings").doc("config").get();
+    const isAiPharmacistEnabled = settingsDoc.exists ? settingsDoc.data()?.ai_pharmacist_enabled !== false : true;
 
-  // If the sender is client and AI Pharmacist is enabled, generate immediate conversational answers using Gemini!
-  const isAiPharmacistEnabled = db.settings?.ai_pharmacist_enabled !== false;
-  
-  if (sender === "client" && isAiPharmacistEnabled) {
-    const userProfile = db.users.find((u: any) => u.id === chatId)?.skinProfile;
-    
-    // Build context
-    const productsString = db.products
-      .map((p: any) => `- Name: "${p.name}", Category: "${p.category}", Brand: "${p.brand}", Price: "${p.price} FCFA", PromoPrice: "${p.promoPrice ? p.promoPrice + ' FCFA' : 'None'}", Description: "${p.description}"`)
-      .join("\n");
+    if (sender === "client" && isAiPharmacistEnabled) {
+      const prodSnapshot = await adminDb.collection("products").get();
+      const productsList = prodSnapshot.docs.map(doc => doc.data() as any);
       
-    const beautyContext = userProfile 
-      ? `Le client est un(e) ${userProfile.gender} de ${userProfile.age} ans. Type de peau : ${userProfile.skinType}, Cuir chevelu/cheveux : ${userProfile.hairType}. Préoccupations : ${userProfile.concerns.join(", ")}.`
-      : "Le client n'a pas encore complété son questionnaire beauté.";
+      const userRef = adminDb.collection("users").doc(chatId);
+      const userDoc = await userRef.get();
+      const userProfile = userDoc.exists ? userDoc.data()?.skinProfile : null;
 
-    const systemPrompt = `Tu es Inès, conseillère experte en beauté cosmétique pour notre boutique unique Akwaba Beauté en Côte d'Ivoire.
-Ton objectif est d'écouter les préoccupations de beauté des clients, de poser un diagnostic de peau et capillaire complice et professionnel, et de lui suggérer les produits spécifiques de soins issus de notre catalogue. Une seule boutique gère toutes les livraisons en Côte d'Ivoire.
-Réponds exclusivement en Français branché mais soigné (ton amical ivoirien poli, chaleureux et professionnel. Utilise des expressions comme "Bienvenue chez nous", "Akwaba").
-La monnaie nationale est le Franc CFA (XOF). Toutes tes suggestions de prix doivent être exactes par rapport au catalogue ci-dessous.
+      const productsString = productsList
+        .map((p: any) => `- Name: "${p.name}", Category: "${p.category}", Brand: "${p.brand}", Price: "${p.price} FCFA", PromoPrice: "${p.promoPrice ? p.promoPrice + ' FCFA' : 'None'}", Description: "${p.description}"`)
+        .join("\n");
+        
+      const beautyContext = userProfile 
+        ? `Le client est un(e) ${userProfile.gender} de ${userProfile.age} ans. Type de peau : ${userProfile.skinType}, Cuir chevelu/cheveux : ${userProfile.hairType}. Préoccupations : ${userProfile.concerns.join(", ")}.`
+        : "Le client n'a pas encore complété son questionnaire beauté.";
+
+      const systemPrompt = `Tu es Inès, conseillère experte en beauté cosmétique pour notre boutique unique Akwaba Beauté en Côte d'Ivoire.
+Ton objectif est d'écouter les préoccupations de beauté des clients, de poser un diagnostic de peau et capillaire complice avant de lui suggérer les produits du catalogue ci-dessous.
+Réponds exclusivement en Français (ton chaleureux, complice et poli, propre aux ivoiriens, utilise des acronymes comme "Akwaba").
+Toutes tes suggestions de prix doivent être exactes par rapport au catalogue ci-dessous.
 
 INFORMATIONS DU CLIENT :
 ${beautyContext}
 
-NOTRE CATALOGUE PRODUITS DE LA BOUTIQUE :
+NOTRE CATALOGUE PRODUITS :
 ${productsString}
 
-Consignes impératives pour ta réponse :
-1. Analyse le message du client et réponds d'un ton chaleureux et rassurant de coach beauté.
-2. Identifie 1 ou 2 produits correspondants exactement dans notre catalogue et recommande-les explicitement avec leur nom exact, marque et leur prix en FCFA (par exemple: "Lait Hydratant Actif au Beurre de Karité à 6000 FCFA").
-3. Donne des conseils pratiques d'utilisation adaptés au climat humide ou chaud de Côte d'Ivoire.
-4. Reste concise (moins de 200 mots) pour assurer une lecture agréable en messagerie instantanée.`;
+Consignes :
+1. Reste extrêmement bienveillante et donne 1 ou 2 produits correspondants exactement.
+2. Écris en moins de 180 mots.`;
 
-    try {
-      let aiText = "";
-      let suggestedIds: string[] = [];
+      try {
+        let aiText = "";
+        let suggestedIds: string[] = [];
 
-      if (ai) {
-        const aiResponse = await ai.models.generateContent({
-          model: "gemini-3.5-flash",
-          contents: message,
-          config: {
-            systemInstruction: systemPrompt,
-            temperature: 0.8
-          }
-        });
-        aiText = aiResponse.text || "Bonjour, j'analyse votre demande beauté de ce pas. Notre équipe vous conseille au mieux !";
-        
-        // Extract product IDs that were mentioned
-        db.products.forEach((p: any) => {
-          if (aiText.toLowerCase().includes(p.name.toLowerCase().substring(0, 15))) {
-            suggestedIds.push(p.id);
-          }
-        });
-      } else {
-        // Fallback offline responses if API key is absent
-        const keyword = message.toLowerCase();
-        if (keyword.includes("tache") || keyword.includes("acne") || keyword.includes("bouton")) {
-          aiText = "Akwaba! À Abidjan, le climat chaud stimule la production du sébum. Pour vos taches et boutons sur le visage, je vous invite à découvrir notre 'Sérum Concentré Éclat & Anti-Taches' de DermIvoire (10 500 FCFA) couplé à notre 'Gel Nettoyant Visage Anti-Imperfections' de SoinPur (5 000 FCFA). Lavez délicatement votre visage matin et soir. Livraison rapide partout en Côte d'Ivoire!";
-          suggestedIds = ["prod-2", "prod-3"];
-        } else if (keyword.includes("sec") || keyword.includes("hydrat") || keyword.includes("karite")) {
-          aiText = "Bonjour ma chère! Pour réparer la peau sèche, notre 'Lait Hydratant Actif au Beurre de Karité' de Glow Éburnie (Promotion à 6 000 FCFA) est un véritable délice. Appliquez-le juste après votre douche pour sceller l'hydratation. Bisous de l'équipe Akwaba Beauté !";
-          suggestedIds = ["prod-1", "prod-5"];
-        } else if (keyword.includes("cheveu") || keyword.includes("pousse") || keyword.includes("chute")) {
-          aiText = "Bonjour ! Le cheveu afro ou crépu a besoin d'humectants riches. Notre 'Mousse Capillaire Fortifiante Pousse Active' (9 500 FCFA) de Sika Secrets stimule le cuir chevelu. Massez pendant 3 minutes après application, vous verrez des miracles !";
-          suggestedIds = ["prod-4"];
+        if (ai) {
+          const aiResponse = await ai.models.generateContent({
+            model: "gemini-3.5-flash",
+            contents: message,
+            config: {
+              systemInstruction: systemPrompt,
+              temperature: 0.8
+            }
+          });
+          aiText = aiResponse.text || "Bonjour! J'étudie votre demande beauté immédiatement.";
+          
+          productsList.forEach((p: any) => {
+            if (aiText.toLowerCase().includes(p.name.toLowerCase().substring(0, 15))) {
+              suggestedIds.push(p.id);
+            }
+          });
         } else {
-          aiText = "Akwaba! Je suis Inès, votre conseillère beauté. J'ai bien reçu votre message. Pour vous orienter au mieux, complétez notre Questionnaire Beauté sur votre profil. Notre 'Savon Beurre de Coco & Karité' (2 550 FCFA) artisanal est également très recommandé !";
-          suggestedIds = ["prod-5"];
+          // Offline Fallback
+          aiText = "Akwaba! Pour corriger l'éclat de votre teint, notre Lait Hydratant Actif au Beurre de Karité à 6000 FCFA est extrêmement riche. Notre équipe beauté reste à votre pleine écoute !";
+          suggestedIds = ["prod-1"];
         }
+
+        const aiMsgId = `msg-${Date.now() + 1}`;
+        const aiMsg = {
+          id: aiMsgId,
+          chatId,
+          sender: "admin",
+          senderName: "Inès, Conseillère Beauté (AI)",
+          message: aiText,
+          timestamp: new Date().toISOString(),
+          suggestedProductIds: suggestedIds
+        };
+
+        await adminDb.collection("messages").doc(aiMsgId).set(aiMsg);
+        
+        await chatRef.update({
+          lastMessage: aiText,
+          lastTimestamp: new Date().toISOString(),
+          unreadCount: 0
+        });
+
+      } catch (aiErr) {
+        console.error("AI chat generation fail:", aiErr);
       }
-
-      const aiMsg = {
-        id: `msg-${Date.now() + 1}`,
-        chatId,
-        sender: "admin" as const,
-        senderName: "Inès, Conseillère Beauté (AI)",
-        message: aiText,
-        timestamp: new Date().toISOString(),
-        suggestedProductIds: suggestedIds
-      };
-
-      db.messages.push(aiMsg);
-      chatSession.lastMessage = aiText;
-      chatSession.lastTimestamp = new Date().toISOString();
-      chatSession.unreadCount = 0;
-      writeDB(db);
-
-    } catch (err) {
-      console.error("Gemini failed to generate pharmacist response, utilizing fallback", err);
     }
-  }
 
-  // Reload and send all messages of the discussion back to client
-  const updatedDb = getDB();
-  res.status(201).json(updatedDb.messages.filter((m: any) => m.chatId === chatId));
+    // Return the updated feed sorted
+    const updatedDocs = await adminDb.collection("messages").where("chatId", "==", chatId).get();
+    const finalMessages = updatedDocs.docs.map(doc => doc.data());
+    finalMessages.sort((a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    res.json(finalMessages);
+
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
 });
 
 // Configure AI Pharmacist Mode switch
-app.post("/api/settings/ai-pharmacist", (req, res) => {
+app.post("/api/settings/ai-pharmacist", async (req, res) => {
   const { enabled } = req.body;
-  const db = getDB();
-  if (!db.settings) db.settings = {};
-  db.settings.ai_pharmacist_enabled = enabled;
-  writeDB(db);
-  res.json({ success: true, enabled });
+  try {
+    await adminDb.collection("settings").doc("config").set({ ai_pharmacist_enabled: enabled }, { merge: true });
+    res.json({ success: true, enabled });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
 });
 
 // 5. Beauty Diagnostic Recommendation API
 app.post("/api/diagnostics/analyze", async (req, res) => {
   const { gender, age, skinType, hairType, concerns } = req.body;
-  const db = getDB();
 
-  // Create prompt for Gemini to generate a highly detailed and beautifully structured skincare routine
   const prompt = `Génère un diagnostic de beauté cosmétique et conseils de soins sur-mesure pour un client en Côte d'Ivoire.
 Profil :
 - Genre : ${gender}
@@ -715,7 +680,6 @@ Schémas attendu :
 
       diagnosisResult = JSON.parse(response.text || "{}");
     } else {
-      // Offline fallback templates based on skincare and concerns
       diagnosisResult = {
         diagnostic: `Votre peau de type ${skinType} et cheveux ${hairType} réclament une attention adaptée au climat humide d'Abidjan. L'hyperpigmentation due au soleil ivoirien aggrave les soucis liés aux préoccupations (${concerns.join(", ")}). Il faut purifier en douceur sans décaper.`,
         routineMatin: [
@@ -738,134 +702,148 @@ Schémas attendu :
     res.json(diagnosisResult);
 
   } catch (err) {
-    console.error("Gemini diagnosis generator error, falling back", err);
-    res.status(500).json({ error: "Calcul du diagnostic impossible" });
+    console.error("Gemini diagnosis generator error:", err);
+    res.status(550).json({ error: "Calcul du diagnostic impossible" });
   }
 });
 
-// 6. Orders & Checkout API (with MTN / Orange / Moov Money Simulation and automatic confirmation)
-app.get("/api/orders", (req, res) => {
-  const db = getDB();
-  res.json(db.orders);
+// 6. Orders & Checkout API
+app.get("/api/orders", async (req, res) => {
+  try {
+    const snapshot = await adminDb.collection("orders").orderBy("date", "desc").get();
+    const list = snapshot.docs.map(doc => doc.data());
+    res.json(list);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
 });
 
-app.get("/api/orders/user/:userId", (req, res) => {
+app.get("/api/orders/user/:userId", async (req, res) => {
   const { userId } = req.params;
-  const db = getDB();
-  const userOrders = db.orders.filter((o: any) => o.userId === userId);
-  res.json(userOrders);
+  try {
+    const snapshot = await adminDb.collection("orders").where("userId", "==", userId).get();
+    const list = snapshot.docs.map(doc => doc.data());
+    list.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    res.json(list);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
 });
 
-// Checkout and trigger Mobile Money authorization modal payload
-app.post("/api/orders", (req, res) => {
+app.post("/api/orders", async (req, res) => {
   const { userId, customerName, customerPhone, customerEmail, address, city, items, total, paymentMethod } = req.body;
-  const db = getDB();
-
-  // Deduct stocks
-  items.forEach((item: any) => {
-    const prod = db.products.find((p: any) => p.id === item.productId);
-    if (prod) {
-      prod.stock = Math.max(0, prod.stock - item.quantity);
-      if (prod.stock === 0) {
-        prod.isAvailable = false;
+  try {
+    // Deduct stock in Firestore
+    for (const item of items) {
+      const prodRef = adminDb.collection("products").doc(item.productId);
+      const prodDoc = await prodRef.get();
+      if (prodDoc.exists) {
+        const prodData = prodDoc.data() as any;
+        const currentStock = prodData.stock || 0;
+        const newStock = Math.max(0, currentStock - item.quantity);
+        await prodRef.update({
+          stock: newStock,
+          isAvailable: newStock > 0
+        });
       }
     }
-  });
 
-  const newOrder = {
-    id: `cmd-${Math.floor(1000 + Math.random() * 9000)}`,
-    userId,
-    customerName,
-    customerPhone,
-    customerEmail,
-    address,
-    city: city || "Abidjan",
-    items,
-    total,
-    status: "En attente" as const,
-    paymentMethod,
-    paymentStatus: "Payé" as const, // For prototype flow, payment succeeds automatically with confirmation code!
-    date: new Date().toISOString()
-  };
+    const id = `cmd-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newOrder = {
+      id,
+      userId,
+      customerName,
+      customerPhone,
+      customerEmail,
+      address,
+      city: city || "Abidjan",
+      items,
+      total,
+      status: "En attente",
+      paymentMethod,
+      paymentStatus: "Payé",
+      date: new Date().toISOString()
+    };
 
-  db.orders.unshift(newOrder);
-  writeDB(db);
-
-  res.status(201).json(newOrder);
-});
-
-// Admin updates order delivery status
-app.put("/api/orders/:id/status", (req, res) => {
-  const { id } = req.params;
-  const { status } = req.body;
-  const db = getDB();
-  const index = db.orders.findIndex((o: any) => o.id === id);
-
-  if (index !== -1) {
-    db.orders[index].status = status;
-    writeDB(db);
-    res.json(db.orders[index]);
-  } else {
-    res.status(404).json({ error: "Commande introuvable" });
+    await adminDb.collection("orders").doc(id).set(newOrder);
+    res.status(201).json(newOrder);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
   }
 });
 
-// 8. Admin Dashboard Statistics Calculation
-app.get("/api/admin/statistics", (req, res) => {
-  const db = getDB();
-  const orders = db.orders;
-  
-  const ordersCount = orders.length;
-  // Sum only Paid orders
-  const revenue = orders
-    .filter((o: any) => o.paymentStatus === "Payé" && o.status !== "Annulée")
-    .reduce((sum: number, o: any) => sum + o.total, 0);
+app.put("/api/orders/:id/status", async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  try {
+    await adminDb.collection("orders").doc(id).update({ status });
+    const snap = await adminDb.collection("orders").doc(id).get();
+    res.json(snap.data());
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
 
-  // Conversion rate (simulated with standard baseline 4.5% + active order weights)
-  const conversionRate = Math.min(15, parseFloat((4.5 + (ordersCount * 0.4)).toFixed(1)));
-  const newCustomers = db.users.filter((u: any) => u.role === "client").length;
+// 7. Admin Dashboard Statistics Calculation
+app.get("/api/admin/statistics", async (req, res) => {
+  try {
+    const ordersSnap = await adminDb.collection("orders").get();
+    const orders = ordersSnap.docs.map(doc => doc.data() as any);
+    
+    const usersSnap = await adminDb.collection("users").get();
+    const usersCount = usersSnap.docs.filter(doc => doc.data()?.role === "client").length;
 
-  // Best selling products
-  const salesMap: Record<string, { sales: number; revenue: number }> = {};
-  orders.forEach((o: any) => {
-    if (o.status === "Annulée") return;
-    o.items.forEach((item: any) => {
-      if (!salesMap[item.name]) {
-        salesMap[item.name] = { sales: 0, revenue: 0 };
-      }
-      salesMap[item.name].sales += item.quantity;
-      salesMap[item.name].revenue += item.price * item.quantity;
+    const ordersCount = orders.length;
+    const revenue = orders
+      .filter((o: any) => o.paymentStatus === "Payé" && o.status !== "Annulée")
+      .reduce((sum: number, o: any) => sum + o.total, 0);
+
+    const conversionRate = Math.min(15, parseFloat((4.5 + (ordersCount * 0.4)).toFixed(1)));
+
+    // Best selling products
+    const salesMap: Record<string, { sales: number; revenue: number }> = {};
+    orders.forEach((o: any) => {
+      if (o.status === "Annulée") return;
+      o.items.forEach((item: any) => {
+        if (!salesMap[item.name]) {
+          salesMap[item.name] = { sales: 0, revenue: 0 };
+        }
+        salesMap[item.name].sales += item.quantity;
+        salesMap[item.name].revenue += item.price * item.quantity;
+      });
     });
-  });
 
-  const popularProducts = Object.entries(salesMap)
-    .map(([name, stat]) => ({ name, sales: stat.sales, revenue: stat.revenue }))
-    .sort((a, b) => b.sales - a.sales)
-    .slice(0, 5);
+    const popularProducts = Object.entries(salesMap)
+      .map(([name, stat]) => ({ name, sales: stat.sales, revenue: stat.revenue }))
+      .sort((a, b) => b.sales - a.sales)
+      .slice(0, 5);
 
-  // Growth daily tracking (CFA over past days)
-  const salesByDay: Record<string, number> = {};
-  orders.forEach((o: any) => {
-    if (o.status === "Annulée") return;
-    const dateObj = new Date(o.date);
-    const dayLabel = `${dateObj.getDate()} Juin`;
-    salesByDay[dayLabel] = (salesByDay[dayLabel] || 0) + o.total;
-  });
+    // Growth daily tracking
+    const salesByDay: Record<string, number> = {};
+    orders.forEach((o: any) => {
+      if (o.status === "Annulée") return;
+      const dateObj = new Date(o.date);
+      const dayLabel = `${dateObj.getDate()} Juin`;
+      salesByDay[dayLabel] = (salesByDay[dayLabel] || 0) + o.total;
+    });
 
-  // Reformat salesByDay as ordered array
-  const formattedSales = Object.entries(salesByDay).map(([day, amount]) => ({
-    day,
-    amount
-  })).reverse();
+    const formattedSales = Object.entries(salesByDay).map(([day, amount]) => ({
+      day,
+      amount
+    })).reverse();
 
-  res.json({
-    ordersCount,
-    revenue,
-    conversionRate,
-    newCustomers,
-    popularProducts,
-    salesByDay: formattedSales.length > 0 ? formattedSales : [{ day: "Aujourd'hui", amount: revenue }]
-  });
+    res.json({
+      ordersCount,
+      revenue,
+      conversionRate,
+      newCustomers: usersCount,
+      popularProducts,
+      salesByDay: formattedSales.length > 0 ? formattedSales : [{ day: "Aujourd'hui", amount: revenue }]
+    });
+
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
 });
 
 // ----------------------
