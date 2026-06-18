@@ -142,39 +142,78 @@ export default function App() {
     };
   }, [currentUser]);
 
-  // 2.2 Secure Server REST Polling for Orders and Chats
+  // 2.2 Secure Server REST Polling for Products, Categories, Messages, Orders, Chats, and Customers
   useEffect(() => {
-    if (!currentUser) return;
-
-    const fetchOrdersAndChats = async () => {
+    const fetchFullPlatformData = async () => {
       try {
-        // Fetch Orders
-        const ordUrl = currentUser.role === 'admin' 
-          ? '/api/orders' 
-          : `/api/orders/user/${currentUser.id}`;
-        const ordRes = await fetch(ordUrl);
-        if (ordRes.ok) {
-          const ordList = await ordRes.json() as Order[];
-          ordList.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-          setOrders(ordList);
+        // 1. Constantly cache / fallback-retrieve Catalog & Categories (guarantees immediately synced display)
+        const prodRes = await fetch('/api/products');
+        if (prodRes.ok) {
+          const prodList = await prodRes.json() as Product[];
+          setProducts(prodList);
         }
 
-        // Fetch Chats
-        const chatRes = await fetch('/api/chats');
-        if (chatRes.ok) {
-          const chatList = await chatRes.json() as ChatSession[];
-          setChats(chatList);
+        const catRes = await fetch('/api/categories');
+        if (catRes.ok) {
+          const catList = await catRes.json() as Category[];
+          setCategories(catList);
+        }
+
+        // 2. Load authenticated user state lists
+        if (currentUser) {
+          // Fetch user or admin Orders
+          const ordUrl = currentUser.role === 'admin' 
+            ? '/api/orders' 
+            : `/api/orders/user/${currentUser.id}`;
+          const ordRes = await fetch(ordUrl);
+          if (ordRes.ok) {
+            const ordList = await ordRes.json() as Order[];
+            ordList.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            setOrders(ordList);
+          }
+
+          if (currentUser.role === 'admin') {
+            // Fetch chats for backend management thread list
+            const chatRes = await fetch('/api/chats');
+            if (chatRes.ok) {
+              const chatList = await chatRes.json() as ChatSession[];
+              setChats(chatList);
+            }
+
+            // Fetch list of registered clients for admin customer cards
+            const usersRes = await fetch('/api/users');
+            if (usersRes.ok) {
+              const uList = await usersRes.json() as User[];
+              setUsers(uList);
+            }
+
+            // Sync all messages across all conversations for admin dashboard
+            const msgRes = await fetch('/api/messages');
+            if (msgRes.ok) {
+              const msgList = await msgRes.json() as ChatMessage[];
+              msgList.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+              setMessages(msgList);
+            }
+          } else {
+            // Sync specific client messages for dynamic private conversation thread
+            const msgRes = await fetch(`/api/chats/${currentUser.id}/messages`);
+            if (msgRes.ok) {
+              const msgList = await msgRes.json() as ChatMessage[];
+              msgList.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+              setMessages(msgList);
+            }
+          }
         }
       } catch (err) {
-        console.error("Failed to sync orders or chats with server API:", err);
+        console.error("Platform background REST synchronization error:", err);
       }
     };
 
-    // Run immediately on mount or user change
-    fetchOrdersAndChats();
+    // Run sync immediately on mount or user change
+    fetchFullPlatformData();
 
-    // Setup periodic sync every 4 seconds
-    const interval = setInterval(fetchOrdersAndChats, 4000);
+    // Setup periodic sync every 3 seconds for extremely responsive dashboard updates
+    const interval = setInterval(fetchFullPlatformData, 3000);
 
     return () => clearInterval(interval);
   }, [currentUser]);

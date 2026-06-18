@@ -1,10 +1,9 @@
 {
   "projectId": "filant225-base",
-  "appId": "1:620102449526:web:034bb2d244362260682257",
-  "apiKey": "AIzaSyBYoX0tIbEeM2PlP44ToE_kDcpj6RheIIo",
+  "appId": "1:620102449526:web:aa08be2ad15df821682257",
+  "apiKey": "AIzaSyDvsEfOOwGFrM6k8JaxH8wF_f1lUVjCHdY",
   "authDomain": "filant225-base.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-968108a7-e23a-46ab-bec3-337e5e9dadd2",
   "storageBucket": "filant225-base.firebasestorage.app",
   "messagingSenderId": "620102449526",
-  "measurementId": "G-TC4M61VX2S"
+  "measurementId": "G-PGQNBNME48"
 }

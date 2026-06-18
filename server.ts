@@ -4,8 +4,23 @@ import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from "dotenv";
-import { initializeApp, getApps } from 'firebase-admin/app';
-import { getFirestore, Firestore } from 'firebase-admin/firestore';
+import { initializeApp } from "firebase/app";
+import { 
+  getFirestore, 
+  collection, 
+  doc, 
+  getDoc, 
+  getDocs, 
+  setDoc, 
+  updateDoc, 
+  deleteDoc, 
+  query, 
+  where, 
+  orderBy, 
+  limit,
+  QueryConstraint
+} from "firebase/firestore";
+import { getAuth, signInAnonymously } from "firebase/auth";
 
 // Load environment variables
 dotenv.config();
@@ -16,28 +31,97 @@ app.use(express.json());
 
 const PORT = 3000;
 
-// Initialize Firebase Admin SDK using application credentials or local project configuration
-let adminDb: Firestore;
-try {
-  const configPath = path.join(process.cwd(), "firebase-applet-config.json");
-  let projectId = "filant225-base";
-  let databaseId = "";
-  if (fs.existsSync(configPath)) {
-    const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
-    projectId = config.projectId || projectId;
-    databaseId = config.firestoreDatabaseId || "";
+// Initialize Firebase Web Client SDK wrapper to securely connect to filant225-base
+const firebaseConfig = {
+  apiKey: "AIzaSyDvsEfOOwGFrM6k8JaxH8wF_f1lUVjCHdY",
+  authDomain: "filant225-base.firebaseapp.com",
+  databaseURL: "https://filant225-base-default-rtdb.firebaseio.com",
+  projectId: "filant225-base",
+  storageBucket: "filant225-base.firebasestorage.app",
+  messagingSenderId: "620102449526",
+  appId: "1:620102449526:web:aa08be2ad15df821682257",
+  measurementId: "G-PGQNBNME48"
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const clientDb = getFirestore(firebaseApp);
+const clientAuth = getAuth(firebaseApp);
+
+signInAnonymously(clientAuth)
+  .then(() => console.log("Backend server client SDK signed in anonymously to default database."))
+  .catch(err => console.error("Backend Firebase Auth anonymous fail:", err));
+
+// High-fidelity compatibility wrapper for Admin SDK structure in server.ts
+class DocRefCompat {
+  constructor(private collName: string, private docId: string) {}
+
+  async get() {
+    const snap = await getDoc(doc(clientDb, this.collName, this.docId));
+    return {
+      exists: snap.exists(),
+      id: snap.id,
+      data: () => snap.data()
+    };
   }
-  
-  if (getApps().length === 0) {
-    initializeApp({
-      projectId: projectId
-    });
+
+  async set(data: any, options?: { merge?: boolean }) {
+    await setDoc(doc(clientDb, this.collName, this.docId), data, options);
   }
-  adminDb = databaseId ? getFirestore(databaseId) : getFirestore();
-  console.log("Firebase admin SDK initialized with Cloud Project ID:", projectId, "Database ID:", databaseId || "(default)");
-} catch (error) {
-  console.error("Firebase admin initialization error:", error);
+
+  async update(data: any) {
+    await updateDoc(doc(clientDb, this.collName, this.docId), data);
+  }
+
+  async delete() {
+    await deleteDoc(doc(clientDb, this.collName, this.docId));
+  }
 }
+
+class QueryCompat {
+  constructor(protected collName: string, protected constraints: QueryConstraint[] = []) {}
+
+  where(field: string, op: any, value: any) {
+    return new QueryCompat(this.collName, [...this.constraints, where(field, op, value)]);
+  }
+
+  orderBy(field: string, direction: "asc" | "desc" = "asc") {
+    return new QueryCompat(this.collName, [...this.constraints, orderBy(field, direction)]);
+  }
+
+  limit(num: number) {
+    return new QueryCompat(this.collName, [...this.constraints, limit(num)]);
+  }
+
+  async get() {
+    const q = query(collection(clientDb, this.collName), ...this.constraints);
+    const snap = await getDocs(q);
+    return {
+      empty: snap.empty,
+      size: snap.size,
+      docs: snap.docs.map(d => ({
+        id: d.id,
+        data: () => d.data(),
+        exists: d.exists()
+      }))
+    };
+  }
+}
+
+class CollectionCompat extends QueryCompat {
+  constructor(name: string) {
+    super(name);
+  }
+
+  doc(id: string) {
+    return new DocRefCompat(this.collName, id);
+  }
+}
+
+const adminDb = {
+  collection(name: string) {
+    return new CollectionCompat(name);
+  }
+} as any;
 
 // Initialize Gemini Client safely
 let ai: GoogleGenAI | null = null;
@@ -461,6 +545,26 @@ app.put("/api/users/:id/profile", async (req, res) => {
     await adminDb.collection("users").doc(id).update(req.body);
     const snap = await adminDb.collection("users").doc(id).get();
     res.json({ id, ...snap.data() });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+app.get("/api/users", async (req, res) => {
+  try {
+    const snapshot = await adminDb.collection("users").get();
+    const list = snapshot.docs.map(doc => doc.data());
+    res.json(list);
+  } catch (err) {
+    res.status(550).json({ error: (err as Error).message });
+  }
+});
+
+app.get("/api/messages", async (req, res) => {
+  try {
+    const snapshot = await adminDb.collection("messages").get();
+    const list = snapshot.docs.map(doc => doc.data());
+    res.json(list);
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }

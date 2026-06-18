@@ -16,14 +16,25 @@ import {
   orderBy, 
   limit 
 } from 'firebase/firestore';
-import firebaseConfig from '../../firebase-applet-config.json';
+
+// Dedicated Firebase configuration for this separate application
+const firebaseConfig = {
+  apiKey: "AIzaSyDvsEfOOwGFrM6k8JaxH8wF_f1lUVjCHdY",
+  authDomain: "filant225-base.firebaseapp.com",
+  databaseURL: "https://filant225-base-default-rtdb.firebaseio.com",
+  projectId: "filant225-base",
+  storageBucket: "filant225-base.firebasestorage.app",
+  messagingSenderId: "620102449526",
+  appId: "1:620102449526:web:aa08be2ad15df821682257",
+  measurementId: "G-PGQNBNME48"
+};
 
 // Initialize Firebase App
 const app = initializeApp(firebaseConfig);
 
-// Initialize Services
+// Initialize Services (using the default Firestore database for separate and secure client access)
 export const auth = getAuth(app);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId || '(default)');
+export const db = getFirestore(app);
 
 // Authenticate user anonymously to satisfy "auth != null" firestore security rules
 export async function authenticateAnonymous() {
