@@ -1,0 +1,165 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User accounts with authentication state and application privileges",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["client", "admin", "pharmacist", "agent"] },
+        "displayName": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "profilePicture": { "type": "string" },
+        "city": { "type": "string" },
+        "address": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "isPhoneVerified": { "type": "boolean" }
+      },
+      "required": ["id", "email", "role", "createdAt"]
+    },
+    "Module": {
+      "title": "Module",
+      "description": "Functional modules like E-commerce, Real estate, Equipment rental, or services",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["RETAIL", "RENTAL", "SERVICE"] },
+        "status": { "type": "string", "enum": ["ACTIVE", "INACTIVE"] },
+        "configurationSettings": { "type": "string" }
+      },
+      "required": ["id", "name", "type", "status"]
+    },
+    "Item": {
+      "title": "Item",
+      "description": "A general database listing representing real estate, listings, cosmetics, or service offerings",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "price": { "type": "number" },
+        "status": { "type": "string", "enum": ["AVAILABLE", "UNAVAILABLE", "DRAFT"] },
+        "description": { "type": "string" },
+        "images": { "type": "array" },
+        "metadata": { "type": "string" },
+        "moduleId": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "ownerName": { "type": "string" },
+        "ownerPhone": { "type": "string" },
+        "dateAdded": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "price", "status", "moduleId"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "A transaction record representing a purchase, service request, booking, or rental contract",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userPhone": { "type": "string" },
+        "itemId": { "type": "string" },
+        "itemTitle": { "type": "string" },
+        "itemPrice": { "type": "number" },
+        "quantity": { "type": "integer" },
+        "total": { "type": "number" },
+        "status": { "type": "string", "enum": ["PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"] },
+        "paymentStatus": { "type": "string", "enum": ["PENDING", "PAID", "FAILED"] },
+        "paymentMethod": { "type": "string" },
+        "startDate": { "type": "string" },
+        "endDate": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "itemId", "status", "paymentStatus", "createdAt"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "Direct chat message between clients, administrators, or service agents",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "receiverId": { "type": "string" },
+        "content": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "orderId": { "type": "string" }
+      },
+      "required": ["id", "senderId", "receiverId", "content", "timestamp"]
+    },
+    "UserModuleAccess": {
+      "title": "UserModuleAccess",
+      "description": "Access privileges or subscriptions linking a user to a specific module",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "moduleId": { "type": "string" },
+        "accessLevel": { "type": "string", "enum": ["GRANTED", "DENIED", "PENDING_SUBSCRIBED"] }
+      },
+      "required": ["userId", "moduleId", "accessLevel"]
+    },
+    "ActivityLog": {
+      "title": "ActivityLog",
+      "description": "Chronological audit log tracking users and administrator actions in the app",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "action": { "type": "string" },
+        "details": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "action", "timestamp"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "System notices pushed to individual users concerning orders, messages, or modules",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "read": { "type": "boolean" }
+      },
+      "required": ["id", "userId", "title", "message", "timestamp", "read"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "User" },
+      "description": "User profiles"
+    },
+    "/modules/{moduleId}": {
+      "schema": { "$ref": "Module" },
+      "description": "Global capabilities modules"
+    },
+    "/items/{itemId}": {
+      "schema": { "$ref": "Item" },
+      "description": "Active listings, listings, products, and services"
+    },
+    "/orders/{orderId}": {
+      "schema": { "$ref": "Order" },
+      "description": "unified transactions, reservations, and orders"
+    },
+    "/messages/{messageId}": {
+      "schema": { "$ref": "Message" },
+      "description": "Omnichannel routing messages"
+    },
+    "/userModuleAccess/{accessId}": {
+      "schema": { "$ref": "UserModuleAccess" },
+      "description": "Abonnements of users"
+    },
+    "/activityLogs/{logId}": {
+      "schema": { "$ref": "ActivityLog" },
+      "description": "System audits"
+    },
+    "/notifications/{notifId}": {
+      "schema": { "$ref": "Notification" },
+      "description": "User direct alerts"
+    }
+  }
+}
