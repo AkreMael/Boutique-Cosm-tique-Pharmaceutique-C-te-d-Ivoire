@@ -7,7 +7,7 @@ import Cart from './components/Cart';
 import AdminPanel from './components/AdminPanel';
 import LoginScreen from './components/LoginScreen';
 import { Product, Category, User, CartItem, Order, ChatSession, ChatMessage, BeautyProfile } from './types';
-import { HeartPulse, Plus, Check, Star, X, Shield, Info, ShoppingBag } from 'lucide-react';
+import { HeartPulse, Plus, Check, Star, X, Shield, Info, ShoppingBag, MessageSquare, Send, Sparkles } from 'lucide-react';
 import { db, collection, doc, onSnapshot, setDoc, query, where, authenticateAnonymous } from './lib/firebase';
 
 export default function App() {
@@ -48,6 +48,31 @@ export default function App() {
   });
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+
+  // Floating Chat states and unread indicators
+  const [isFloatingChatOpen, setIsFloatingChatOpen] = useState(false);
+  const [floatingInput, setFloatingInput] = useState('');
+  const [showNewMsgToast, setShowNewMsgToast] = useState(false);
+  const [toastContent, setToastContent] = useState('');
+  const [lastMsgIdTracked, setLastMsgIdTracked] = useState<string | null>(null);
+
+  // Monitor incoming notifications in real-time for normal client sessions
+  useEffect(() => {
+    if (!currentUser || currentUser.role === 'admin' || isFloatingChatOpen) return;
+
+    const myMsgs = messages.filter((m) => m.chatId === currentUser.id);
+    if (myMsgs.length === 0) return;
+
+    const lastMsg = myMsgs[myMsgs.length - 1];
+    if (lastMsg.sender === 'admin' && lastMsg.id !== lastMsgIdTracked) {
+      setLastMsgIdTracked(lastMsg.id);
+      setToastContent(lastMsg.message);
+      setShowNewMsgToast(true);
+      // Automatically dismiss the slide-in toast in 6 seconds
+      const timer = setTimeout(() => setShowNewMsgToast(false), 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [messages, currentUser, isFloatingChatOpen, lastMsgIdTracked]);
 
   // 1. Initial configuration check: load logged-in user session
   useEffect(() => {
@@ -629,6 +654,177 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      {/* 5. FLOATING CHAT MESSENGER (CLIENT ONLY) */}
+      {(!currentUser || currentUser.role !== 'admin' || adminViewMode === 'client') && (
+        <div id="floating-messenger-and-toast-portal" className="font-sans">
+          
+          {/* New Message Toast Overlay */}
+          {showNewMsgToast && !isFloatingChatOpen && (
+            <div 
+              onClick={() => {
+                setIsFloatingChatOpen(true);
+                setShowNewMsgToast(false);
+              }}
+              className="fixed bottom-24 right-6 bg-white border border-rose-100 p-4 rounded-3xl shadow-2xl max-w-xs z-50 animate-scale-up flex gap-3 cursor-pointer hover:bg-zinc-50 border-l-4 border-l-rose-500"
+            >
+              <div className="h-9 w-9 bg-rose-50 rounded-full flex items-center justify-center text-rose-500 shrink-0">
+                <Sparkles className="h-5 w-5 animate-pulse" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-black text-rose-950">Message de la conseillère !</p>
+                <p className="text-[11px] text-zinc-400 mt-0.5 truncate leading-tight">{toastContent}</p>
+                <p className="text-[9px] text-rose-600 mt-1 font-bold font-mono uppercase tracking-wider">Cliquez pour répondre</p>
+              </div>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowNewMsgToast(false);
+                }}
+                className="text-zinc-300 hover:text-zinc-650 p-1 rounded-full text-[10px] self-start"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          )}
+
+          {/* Floating Compact Chat Window */}
+          {isFloatingChatOpen && (
+            <div className="fixed bottom-24 right-6 w-80 sm:w-85 h-[420px] bg-white border border-rose-100/70 rounded-[2rem] shadow-2xl z-50 overflow-hidden flex flex-col justify-between animate-scale-up">
+              
+              {/* Header section with branding */}
+              <div className="bg-rose-950 text-white p-4 shrink-0 flex items-center justify-between border-b border-rose-900 shadow-sm">
+                <div className="flex items-center space-x-2.5">
+                  <div className="h-8 w-8 rounded-full bg-rose-500 flex items-center justify-center shadow">
+                    <Sparkles className="h-4.5 w-4.5 text-white animate-pulse" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold leading-none">Inès • Conseillère Beauté</h4>
+                    <p className="text-[9px] text-emerald-400 mt-0.5 font-medium flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full inline-block animate-ping"></span>
+                      <span>En ligne • Abidjan</span>
+                    </p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setIsFloatingChatOpen(false)}
+                  className="p-1 rounded-full text-zinc-400 hover:text-white hover:bg-white/10 transition cursor-pointer"
+                  title="Masquer"
+                >
+                  <X className="h-4.5 w-4.5" />
+                </button>
+              </div>
+
+              {/* Chat messages feed */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-zinc-50/50">
+                {!currentUser ? (
+                  /* Requiring login scenario */
+                  <div className="h-full flex flex-col items-center justify-center text-center p-4 space-y-4">
+                    <span className="text-3xl">💬</span>
+                    <div>
+                      <h4 className="text-xs font-bold text-rose-950">Dialogue de Routine Privée</h4>
+                      <p className="text-[10px] text-zinc-400 mt-1 leading-relaxed">
+                        Pour enregistrer vos rituels, obtenir des diagnostics et discuter avec notre pharmacie, veuillez d'abord vous identifier.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setIsFloatingChatOpen(false);
+                        setShowLoginModal(true);
+                      }}
+                      className="px-4 py-2.5 bg-rose-950 hover:bg-rose-900 text-white font-bold text-[10.5px] rounded-xl transition shadow active:scale-95 cursor-pointer"
+                    >
+                      S'identifier / S'enregistrer
+                    </button>
+                  </div>
+                ) : (
+                  /* Authenticated discussion feed */
+                  <>
+                    <div className="p-3 bg-rose-50/30 border border-rose-100 rounded-2xl text-[10px] text-zinc-650 leading-relaxed">
+                      <p className="font-bold text-rose-900 mb-1 flex items-center gap-1.5">
+                        <Sparkles className="h-3.5 w-3.5 text-rose-500" />
+                        <span>Akwaba Beauté Conseillère IA</span>
+                      </p>
+                      Posez-moi vos questions ! Mon diagnostic s'améliore si vous décrivez votre type de peau ou routine dans votre espace profil.
+                    </div>
+
+                    {messages.filter(m => m.chatId === currentUser.id).length === 0 && (
+                      <div className="text-center py-6 text-[10px] text-zinc-400">
+                        Aucun message précédent. Lancez la discussion !
+                      </div>
+                    )}
+
+                    {messages.filter(m => m.chatId === currentUser.id).map((msg) => {
+                      const isMe = msg.sender === 'client';
+                      return (
+                        <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+                          <div className={`max-w-[85%] rounded-2xl p-3 text-[11px] leading-relaxed shadow-xs ${
+                            isMe ? 'bg-rose-950 text-white rounded-tr-none' : 'bg-white border border-zinc-150 text-zinc-800 rounded-tl-none'
+                          }`}>
+                            <p className="font-semibold text-[8px] opacity-75 mb-0.5 capitalize">{msg.senderName}</p>
+                            <p className="whitespace-pre-line font-normal text-xs leading-relaxed">{msg.message}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
+              </div>
+
+              {/* Chat text box input zone */}
+              {currentUser && (
+                <form 
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (!floatingInput.trim()) return;
+                    const textToSend = floatingInput;
+                    setFloatingInput('');
+                    await handleSendMessage(currentUser.id, textToSend);
+                  }}
+                  className="p-3 bg-white border-t border-rose-50 shrink-0 flex gap-1.5 items-center"
+                >
+                  <input
+                    type="text"
+                    required
+                    placeholder="Écrivez un message..."
+                    value={floatingInput}
+                    onChange={(e) => setFloatingInput(e.target.value)}
+                    className="flex-1 p-2.5 bg-zinc-50 border border-zinc-150 rounded-xl text-xs text-zinc-700 focus:outline-none focus:border-rose-450 focus:bg-white transition"
+                  />
+                  <button
+                    type="submit"
+                    className="p-2.5 bg-rose-950 hover:bg-rose-900 text-white rounded-xl transition cursor-pointer active:scale-95 shadow shrink-0"
+                    title="Envoyer"
+                  >
+                    <Send className="h-3.5 w-3.5" />
+                  </button>
+                </form>
+              )}
+
+            </div>
+          )}
+
+          {/* Floating trigger button */}
+          <button
+            onClick={() => {
+              setIsFloatingChatOpen(!isFloatingChatOpen);
+              setShowNewMsgToast(false);
+            }}
+            className="fixed bottom-6 right-6 h-14 w-14 bg-gradient-to-r from-rose-500 to-rose-600 rounded-full flex items-center justify-center text-white shadow-lg shadow-rose-300 hover:scale-105 active:scale-95 transition cursor-pointer z-50 flex-shrink-0"
+            title="Aide & Conseils Beauté"
+            aria-label="Contacter la conseillère"
+          >
+            {isFloatingChatOpen ? <X className="h-6 w-6" /> : <MessageSquare className="h-6 w-6" />}
+            {/* Pulsating badge indicator for unread administrator messages */}
+            {messages.filter(m => currentUser && m.chatId === currentUser.id && m.sender === 'admin').length > 0 && !isFloatingChatOpen && (
+              <span className="absolute -top-1 -right-1 bg-red-600 border-2 border-white rounded-full h-4 w-4 flex items-center justify-center text-[8px] font-black text-white animate-pulse">
+                !
+              </span>
+            )}
+          </button>
+
+        </div>
+      )}
 
     </div>
   );

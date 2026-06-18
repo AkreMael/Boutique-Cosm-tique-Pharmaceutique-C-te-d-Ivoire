@@ -22,22 +22,27 @@ export default function Catalog({
   const [addedProductId, setAddedProductId] = useState<string | null>(null);
 
   // Extract unique brands for filtering
-  const brands = ['toutes', ...Array.from(new Set(products.map((p) => p.brand)))];
+  const brands = ['toutes', ...Array.from(new Set(products.map((p) => p.brand).filter(Boolean)))];
 
   // Helper to determine active promotional prices
   const getDisplayPrice = (p: Product) => (p.promoPrice ? p.promoPrice : p.price);
 
   // Filter & Sort Logic
   const filteredProducts = products.filter((p) => {
-    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          p.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          p.description.toLowerCase().includes(searchQuery.toLowerCase());
-                          
+    const name = p.name || '';
+    const brand = p.brand || '';
+    const desc = p.description || '';
+    const category = p.category || '';
+
+    const matchesSearch = name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          desc.toLowerCase().includes(searchQuery.toLowerCase());
+                           
     const matchesCategory = selectedCategory === 'tous' || 
-                            p.category === selectedCategory ||
+                            category === selectedCategory ||
                             (selectedCategory === 'promotions' && p.promoPrice !== undefined);
 
-    const matchesBrand = selectedBrand === 'toutes' || p.brand === selectedBrand;
+    const matchesBrand = selectedBrand === 'toutes' || brand === selectedBrand;
 
     return matchesSearch && matchesCategory && matchesBrand;
   }).sort((a, b) => {

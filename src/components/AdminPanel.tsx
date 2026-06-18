@@ -410,6 +410,15 @@ export default function AdminPanel({
               <span>Promos & Réductions</span>
             </button>
             <button
+              onClick={() => setAdminTab('users')}
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer ${
+                adminTab === 'users' ? 'bg-zinc-900 text-white shadow-sm' : 'bg-white hover:bg-zinc-50 text-zinc-700'
+              }`}
+            >
+              <Users className="h-4 w-4" />
+              <span>Clients & Diagnostics ({users.filter(u => u.role !== 'admin').length})</span>
+            </button>
+            <button
               onClick={() => setAdminTab('messages')}
               className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer ${
                 adminTab === 'messages' ? 'bg-zinc-900 text-white shadow-sm' : 'bg-white hover:bg-zinc-50 text-zinc-700'
@@ -1079,6 +1088,109 @@ export default function AdminPanel({
                     </div>
                   );
                 })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ==================================== */}
+        {/* TAB 6.5: MANAGING CUSTOMERS & RITUELS */}
+        {/* ==================================== */}
+        {adminTab === 'users' && (
+          <div className="space-y-6 animate-fade-in text-xs font-sans">
+            <div className="bg-white rounded-3xl p-6 border border-rose-100 shadow-sm">
+              <h3 className="font-extrabold text-rose-950 text-sm mb-1">Fichiers Clients & Diagnostics Beauté</h3>
+              <p className="text-zinc-500 mb-4">Consultez la liste des clients enregistrés, leurs coordonnées (Nom, Ville, Téléphone) et l'historique de leur diagnostic de peau.</p>
+
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-zinc-100">
+                  <thead>
+                    <tr className="text-left font-mono text-[10px] uppercase font-black tracking-wider text-zinc-400 bg-zinc-50 rounded-xl">
+                      <th className="py-3 px-4">Client</th>
+                      <th className="py-3 px-4">Contact & Ville</th>
+                      <th className="py-3 px-4">Diagnostic de Peau / Routines</th>
+                      <th className="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-100 bg-white">
+                    {users.filter(u => u.role !== 'admin').map((user) => {
+                      const profile = user.skinProfile;
+                      return (
+                        <tr key={user.id} className="hover:bg-zinc-50/50 transition">
+                          <td className="py-4 px-4">
+                            <div className="flex items-center space-x-3">
+                              <div className="h-9 w-9 rounded-full bg-rose-50 text-rose-600 font-bold flex items-center justify-center border border-rose-100 shrink-0">
+                                {user.name ? user.name.charAt(0).toUpperCase() : 'C'}
+                              </div>
+                              <div>
+                                <p className="font-bold text-zinc-900 text-sm whitespace-nowrap">{user.name || 'Client de passage'}</p>
+                                <p className="text-[10px] text-zinc-400 font-mono mt-0.5">{user.id}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-4 px-4 space-y-1">
+                            <div className="flex items-center space-x-1.5 text-zinc-700">
+                              <Smartphone className="h-3.5 w-3.5 text-zinc-400" />
+                              <span className="font-mono text-xs whitespace-nowrap">{user.phone}</span>
+                            </div>
+                            <div className="flex items-center space-x-1.5 text-zinc-500">
+                              <MapPin className="h-3.5 w-3.5 text-zinc-400" />
+                              <span>{user.city || 'Non spécifiée'}</span>
+                            </div>
+                            <p className="text-[10px] text-zinc-400 truncate max-w-[200px]" title={user.address}>{user.address}</p>
+                          </td>
+                          <td className="py-4 px-4">
+                            {profile ? (
+                              <div className="p-3 bg-rose-50/15 border border-rose-100/50 rounded-2xl max-w-sm space-y-2">
+                                <div className="flex items-center justify-between gap-4">
+                                  <span className="font-extrabold text-rose-950 font-sans whitespace-nowrap">{profile.gender} • {profile.age} ans</span>
+                                  <span className="px-2 py-0.5 bg-rose-100 text-rose-900 font-black rounded text-[9px] uppercase tracking-wide whitespace-nowrap">{profile.skinType}</span>
+                                </div>
+                                <div className="text-[11px] text-zinc-650 leading-normal">
+                                  <span className="font-bold text-zinc-700">Cheveux & Cuir :</span> {profile.hairType}
+                                </div>
+                                <div className="flex flex-wrap gap-1">
+                                  {profile.concerns && profile.concerns.length > 0 ? (
+                                    profile.concerns.map((con) => (
+                                      <span key={con} className="px-2 py-0.5 bg-white border border-rose-100/70 text-[9px] text-rose-900 font-bold rounded whitespace-nowrap">
+                                        {con}
+                                      </span>
+                                    ))
+                                  ) : (
+                                    <span className="text-[10px] text-zinc-400 italic">Aucune préoccupation renseignée</span>
+                                  )}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center space-x-1.5 text-zinc-400 italic">
+                                <span>Aucun diagnostic de peau effectué</span>
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-4 px-4 text-right">
+                            <button
+                              onClick={() => {
+                                setAdminTab('messages');
+                              }}
+                              className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 border border-rose-100 text-rose-900 font-bold rounded-lg transition whitespace-nowrap cursor-pointer"
+                            >
+                              Discuter / Précrire
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+
+                    {users.filter(u => u.role !== 'admin').length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="text-center py-12 text-zinc-400">
+                          <span className="text-2xl">👤</span>
+                          <p className="text-xs font-bold mt-2 font-sans">Aucun client enregistré pour l'instant</p>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
