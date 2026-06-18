@@ -1,9 +1,9 @@
 import React from 'react';
-import { ShoppingBag, MessageSquare, ShieldCheck, Sparkles, ShoppingCart, LogOut } from 'lucide-react';
+import { ShoppingBag, MessageSquare, ShieldCheck, Sparkles, ShoppingCart, LogOut, LogIn } from 'lucide-react';
 import { User as AppUser, CartItem } from '../types';
 
 interface HeaderProps {
-  currentUser: AppUser;
+  currentUser: AppUser | null;
   cart: CartItem[];
   cartCount: number;
   onLogout: () => void;
@@ -12,6 +12,7 @@ interface HeaderProps {
   setActiveTab: (tab: string) => void;
   adminViewMode?: 'admin' | 'client';
   setAdminViewMode?: (mode: 'admin' | 'client') => void;
+  onLoginClick?: () => void;
 }
 
 export default function Header({
@@ -23,7 +24,8 @@ export default function Header({
   activeTab,
   setActiveTab,
   adminViewMode = 'admin',
-  setAdminViewMode
+  setAdminViewMode,
+  onLoginClick
 }: HeaderProps) {
   return (
     <header id="app-header" className="sticky top-0 z-40 bg-white border-b border-rose-100 shadow-sm font-sans">
@@ -45,7 +47,7 @@ export default function Header({
           {/* Logo / Title */}
           <div 
             onClick={() => {
-              if (currentUser.role === 'client' || adminViewMode === 'client') {
+              if (!currentUser || currentUser.role === 'client' || adminViewMode === 'client') {
                 setActiveTab('catalog');
               }
             }} 
@@ -63,9 +65,9 @@ export default function Header({
           </div>
 
           {/* Navigation Links for Client vs Admin */}
-          {(currentUser.role === 'client' || adminViewMode === 'client') ? (
+          {(!currentUser || currentUser.role === 'client' || adminViewMode === 'client') ? (
             <nav className="hidden md:flex space-x-1 lg:space-x-2 items-center">
-              {currentUser.role === 'admin' && (
+              {currentUser?.role === 'admin' && (
                 <button
                   onClick={() => setAdminViewMode?.('admin')}
                   className="px-3.5 py-1.5 rounded-full text-xs font-black bg-zinc-950 hover:bg-zinc-900 text-white flex items-center space-x-1 shadow-xs border border-zinc-800 transition mr-2.5 cursor-pointer"
@@ -129,7 +131,7 @@ export default function Header({
           <div className="flex items-center space-x-4">
             
             {/* Shopping Cart Button - seen by Clients or Admin in preview mode */}
-            {(currentUser.role === 'client' || adminViewMode === 'client') && (
+            {(!currentUser || currentUser.role === 'client' || adminViewMode === 'client') && (
               <button
                 onClick={onOpenCart}
                 className="relative p-2.5 rounded-full bg-rose-50 text-rose-950 hover:bg-rose-100 transition-colors border border-rose-200/50 cursor-pointer"
@@ -144,38 +146,49 @@ export default function Header({
               </button>
             )}
 
-            {/* Micro User Avatar Indicator */}
-            <div className="flex items-center space-x-2 ml-1">
-              <div className="h-9 w-9 rounded-full bg-zinc-200 border-2 border-rose-200 flex items-center justify-center text-rose-950 font-bold text-xs shadow-sm overflow-hidden select-none">
-                {currentUser.role === 'client' ? (
-                  <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150&auto=format&fit=crop" className="h-full w-full object-cover" alt="Profile" />
-                ) : (
-                  <div className="bg-zinc-950 text-white w-full h-full flex items-center justify-center font-bold font-sans">M</div>
-                )}
+            {currentUser ? (
+              <div className="flex items-center space-x-2 ml-1">
+                <div className="h-9 w-9 rounded-full bg-zinc-200 border-2 border-rose-200 flex items-center justify-center text-rose-950 font-bold text-xs shadow-sm overflow-hidden select-none">
+                  {currentUser.role === 'client' ? (
+                    <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150&auto=format&fit=crop" className="h-full w-full object-cover" alt="Profile" />
+                  ) : (
+                    <div className="bg-zinc-950 text-white w-full h-full flex items-center justify-center font-bold font-sans">M</div>
+                  )}
+                </div>
+                <div className="hidden lg:block text-left select-none">
+                  <p className="text-xs font-semibold leading-none text-rose-950">{currentUser.name}</p>
+                  <p className="text-[10px] uppercase font-mono font-medium text-rose-500 mt-0.5">{currentUser.role === 'admin' ? 'Administrateur' : 'Client'}</p>
+                </div>
               </div>
-              <div className="hidden lg:block text-left select-none">
-                <p className="text-xs font-semibold leading-none text-rose-950">{currentUser.name}</p>
-                <p className="text-[10px] uppercase font-mono font-medium text-rose-500 mt-0.5">{currentUser.role === 'admin' ? 'Administrateur' : 'Client'}</p>
-              </div>
-            </div>
+            ) : (
+              <button
+                onClick={onLoginClick}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs rounded-full flex items-center space-x-1.5 shadow transition active:scale-95 cursor-pointer"
+              >
+                <LogIn className="h-4 w-4" />
+                <span>Se connecter</span>
+              </button>
+            )}
 
             {/* Logout Action */}
-            <button
-              onClick={onLogout}
-              title="Se déconnecter"
-              className="p-2.5 rounded-full bg-zinc-100 text-zinc-650 hover:bg-red-50 hover:text-red-700 transition border border-zinc-200/50 flex items-center justify-center hover:shadow-sm cursor-pointer"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
+            {currentUser && (
+              <button
+                onClick={onLogout}
+                title="Se déconnecter"
+                className="p-2.5 rounded-full bg-zinc-100 text-zinc-650 hover:bg-red-50 hover:text-red-700 transition border border-zinc-200/50 flex items-center justify-center hover:shadow-sm cursor-pointer"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            )}
 
           </div>
 
         </div>
 
         {/* Mobile Navigation bar - seen by Clients or Admin in preview mode */}
-        {(currentUser.role === 'client' || adminViewMode === 'client') && (
+        {(!currentUser || currentUser.role === 'client' || adminViewMode === 'client') && (
           <div className="flex md:hidden items-center justify-center space-x-2 py-3 border-t border-rose-50">
-            {currentUser.role === 'admin' && (
+            {currentUser?.role === 'admin' && (
               <button
                 onClick={() => setAdminViewMode?.('admin')}
                 className="px-2.5 py-1.5 rounded-full text-[10px] font-black bg-zinc-950 text-white flex items-center space-x-1 cursor-pointer"
@@ -213,7 +226,7 @@ export default function Header({
           </div>
         )}
 
-        {currentUser.role === 'admin' && adminViewMode === 'admin' && (
+        {currentUser?.role === 'admin' && adminViewMode === 'admin' && (
           <div className="flex md:hidden items-center justify-between py-2.5 border-t border-zinc-100 px-3">
             <span className="text-[10px] font-extrabold text-zinc-950 tracking-wider flex items-center space-x-1">
               <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />

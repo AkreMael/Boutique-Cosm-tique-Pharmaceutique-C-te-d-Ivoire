@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ShoppingCart, Plus, Minus, Trash2, X, ChevronRight, CheckCircle2, ShieldCheck, CreditCard, Loader2 } from 'lucide-react';
-import { CartItem, Product, Order } from '../types';
+import { CartItem, Product, Order, User as AppUser } from '../types';
 
 interface CartProps {
   cart: CartItem[];
@@ -9,8 +9,9 @@ interface CartProps {
   onUpdateQuantity: (productId: string, quantity: number) => void;
   onRemoveItem: (productId: string) => void;
   onClearCart: () => void;
-  currentUser: { id: string; name: string; phone: string; email: string };
+  currentUser: AppUser | null;
   onOrderCreated: (order: Order) => void;
+  onRequireLogin?: () => void;
 }
 
 export default function Cart({
@@ -21,16 +22,24 @@ export default function Cart({
   onRemoveItem,
   onClearCart,
   currentUser,
-  onOrderCreated
+  onOrderCreated,
+  onRequireLogin
 }: CartProps) {
   const [checkoutStep, setCheckoutStep] = useState<'cart' | 'shipping' | 'payment' | 'ussd' | 'success'>('cart');
   const [operator, setOperator] = useState<'Orange' | 'MTN' | 'Moov'>('Orange');
-  const [phone, setPhone] = useState(currentUser.phone || '');
+  const [phone, setPhone] = useState(currentUser?.phone || '');
   const [city, setCity] = useState('Abidjan');
   const [address, setAddress] = useState('Rue des Jardins, Cocody Deux Plateaux');
   const [pinCode, setPinCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [lastCreatedOrder, setLastCreatedOrder] = useState<Order | null>(null);
+
+  // Synchronise phone number on login
+  React.useEffect(() => {
+    if (currentUser) {
+      setPhone(currentUser.phone || '');
+    }
+  }, [currentUser]);
 
   if (!isOpen) return null;
 
@@ -44,7 +53,13 @@ export default function Cart({
   const totalCost = subtotal + deliveryFee;
 
   const handleNextStep = () => {
-    if (checkoutStep === 'cart') setCheckoutStep('shipping');
+    if (checkoutStep === 'cart') {
+      if (!currentUser) {
+        if (onRequireLogin) onRequireLogin();
+        return;
+      }
+      setCheckoutStep('shipping');
+    }
     else if (checkoutStep === 'shipping') setCheckoutStep('payment');
   };
 
@@ -63,10 +78,10 @@ export default function Cart({
     setLoading(true);
 
     const orderPayload = {
-      userId: currentUser.id,
-      customerName: currentUser.name,
+      userId: currentUser?.id || 'guest',
+      customerName: currentUser?.name || 'Client de passage',
       customerPhone: phone,
-      customerEmail: currentUser.email,
+      customerEmail: currentUser?.email || 'guest@cosmetiques.ci',
       address,
       city,
       items: cart.map((item) => ({
@@ -97,10 +112,10 @@ export default function Cart({
       // Fallback
       const mockSavedOrder: Order = {
         id: `cmd-${Math.floor(1000 + Math.random() * 9000)}`,
-        userId: currentUser.id,
-        customerName: currentUser.name,
+        userId: currentUser?.id || 'guest',
+        customerName: currentUser?.name || 'Client de passage',
         customerPhone: phone,
-        customerEmail: currentUser.email,
+        customerEmail: currentUser?.email || 'guest@cosmetiques.ci',
         address,
         city,
         items: cart.map((item) => ({

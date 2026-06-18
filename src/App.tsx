@@ -18,6 +18,13 @@ export default function App() {
   // Authentication & Loading States
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
+  const [pendingAction, setPendingAction] = useState<
+    | { type: 'add_to_cart'; product: Product }
+    | { type: 'switch_tab'; tab: string }
+    | { type: 'open_cart' }
+    | null
+  >(null);
 
   // Firestore Live States
   const [products, setProducts] = useState<Product[]>([]);
@@ -44,6 +51,11 @@ export default function App() {
 
   // 1. Initial configuration check: load logged-in user session
   useEffect(() => {
+    // Authenticate anonymously in background to solve Firestore secure reads under 'auth != null' rules
+    authenticateAnonymous().catch((err) => {
+      console.error("Silent anonymous login fail:", err);
+    });
+
     const cached = localStorage.getItem('akwaba_user');
     if (cached) {
       try {
@@ -55,21 +67,17 @@ export default function App() {
         } else {
           setActiveTab('catalog');
         }
-        // Authenticate anonymously in background to solve FireStore 'auth != null' condition
-        authenticateAnonymous().catch((err) => {
-          console.error("Silent anonymous login fail:", err);
-        });
       } catch {
         localStorage.removeItem('akwaba_user');
       }
+    } else {
+      setActiveTab('catalog');
     }
     setLoading(false);
   }, []);
 
   // 2. Real-Time Cloud Firestore Continuous Subscriptions (Public Collections)
   useEffect(() => {
-    if (!currentUser) return;
-
     // 1) Subscribe to Products Collection (Public Read allowed)
     const unsubProducts = onSnapshot(collection(db, "products"), (snap) => {
       const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
@@ -83,16 +91,29 @@ export default function App() {
     }, (err) => console.error("Realtime Categories Subscribe error:", err));
 
     // 3) Subscribe to Messages Collection (Authenticated Read allowed)
-    const unsubMessages = onSnapshot(collection(db, "messages"), (snap) => {
-      const list = snap.docs.map(doc => doc.data() as ChatMessage);
-      list.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-      setMessages(list);
-    }, (err) => console.error("Realtime Messages Subscribe error:", err));
+    let unsubMessages = () => {};
+    if (currentUser) {
+      unsubMessages = onSnapshot(collection(db, "messages"), (snap) => {
+        const list = snap.docs.map(doc => doc.data() as ChatMessage);
+        list.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+        setMessages(list);
+      }, (err) => console.error("Realtime Messages Subscribe error:", err));
+    }
+
+    // 4) Subscribe to Users Collection (Admin only)
+    let unsubUsers = () => {};
+    if (currentUser && currentUser.role === 'admin') {
+      unsubUsers = onSnapshot(collection(db, "users"), (snap) => {
+        const list = snap.docs.map(doc => doc.data() as User);
+        setUsers(list);
+      }, (err) => console.error("Realtime Users Subscribe error:", err));
+    }
 
     return () => {
       unsubProducts();
       unsubCategories();
       unsubMessages();
+      unsubUsers();
     };
   }, [currentUser]);
 
@@ -150,12 +171,33 @@ export default function App() {
       // Save locally
       localStorage.setItem('akwaba_user', JSON.stringify(synchronizedUser));
       setCurrentUser(synchronizedUser);
+      setShowLoginModal(false);
 
       if (synchronizedUser.role === 'admin') {
         setActiveTab('admin');
         setAdminViewMode('admin');
       } else {
-        setActiveTab('catalog');
+        if (pendingAction) {
+          if (pendingAction.type === 'add_to_cart') {
+            let updatedCart: CartItem[] = [];
+            const existing = cart.find((item) => item.product.id === pendingAction.product.id);
+            if (existing) {
+              updatedCart = cart.map((item) =>
+                item.product.id === pendingAction.product.id ? { ...item, quantity: item.quantity + 1 } : item
+              );
+            } else {
+              updatedCart = [...cart, { product: pendingAction.product, quantity: 1 }];
+            }
+            syncCartWithDb(updatedCart);
+          } else if (pendingAction.type === 'switch_tab') {
+            setActiveTab(pendingAction.tab);
+          } else if (pendingAction.type === 'open_cart') {
+            setIsCartOpen(true);
+          }
+          setPendingAction(null);
+        } else {
+          setActiveTab('catalog');
+        }
       }
     } catch (err) {
       console.error("Authentication handshake failure:", err);
@@ -175,6 +217,11 @@ export default function App() {
   };
 
   const handleAddToCart = (product: Product) => {
+    if (!currentUser) {
+      setPendingAction({ type: 'add_to_cart', product });
+      setShowLoginModal(true);
+      return;
+    }
     let updatedCart: CartItem[] = [];
     const existing = cart.find((item) => item.product.id === product.id);
     if (existing) {
@@ -306,9 +353,7 @@ export default function App() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status })
     });
-  };
-
-  // Loading spinner view
+  }  // Loading spinner view
   if (loading) {
     return (
       <div className="min-h-screen bg-rose-50/20 flex flex-col items-center justify-center font-sans">
@@ -316,11 +361,6 @@ export default function App() {
         <p className="text-xs font-mono text-rose-950 mt-4 tracking-widest uppercase">Akwaba Beauté • Chargement...</p>
       </div>
     );
-  }
-
-  // Mandatory Authentication Redirect
-  if (!currentUser) {
-    return <LoginScreen onLogin={handleLogin} />;
   }
 
   const cartTotalCount = cart.reduce((count, item) => count + item.quantity, 0);
@@ -336,13 +376,24 @@ export default function App() {
         onLogout={handleLogout}
         onOpenCart={() => setIsCartOpen(true)}
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={(tab) => {
+          if (!currentUser && (tab === 'diagnostic' || tab === 'chat')) {
+            setPendingAction({ type: 'switch_tab', tab });
+            setShowLoginModal(true);
+          } else {
+            setActiveTab(tab);
+          }
+        }}
         adminViewMode={adminViewMode}
         setAdminViewMode={setAdminViewMode}
+        onLoginClick={() => {
+          setPendingAction(null);
+          setShowLoginModal(true);
+        }}
       />
 
       {/* Mode Preview visual banner for administrator preview convenience */}
-      {currentUser.role === 'admin' && adminViewMode === 'client' && (
+      {currentUser?.role === 'admin' && adminViewMode === 'client' && (
         <div id="admin-preview-top-alert" className="bg-rose-600 text-white text-xs font-bold py-2.5 px-4 text-center flex flex-col sm:flex-row justify-center items-center gap-1.5 shadow-sm border-b border-rose-500 animate-pulse">
           <span>👀 MODE APERÇU BOUTIQUE ACTIF — Vous visualisez le rendu exact de la boutique côté client.</span>
           <button 
@@ -359,7 +410,7 @@ export default function App() {
 
       {/* 2. CORE RENDERING ENGINE */}
       <main className="flex-1">
-        {(currentUser.role === 'client' || adminViewMode === 'client') ? (
+        {(!currentUser || currentUser.role === 'client' || adminViewMode === 'client') ? (
           <>
             {activeTab === 'catalog' && (
               <Catalog
@@ -372,13 +423,13 @@ export default function App() {
 
             {activeTab === 'diagnostic' && (
               <BeautyQuestionnaire
-                currentProfile={currentUser.skinProfile}
+                currentProfile={currentUser?.skinProfile}
                 products={products}
                 onSaveProfile={handleSaveBeautyProfile}
               />
             )}
 
-            {activeTab === 'chat' && (
+            {activeTab === 'chat' && currentUser && (
               <PharmacistChat
                 currentUser={currentUser}
                 products={products}
@@ -392,22 +443,24 @@ export default function App() {
             )}
           </>
         ) : (
-          <AdminPanel
-            products={products}
-            orders={orders}
-            users={users}
-            categories={categories}
-            onAddProduct={handleAddProduct}
-            onUpdateProduct={handleUpdateProduct}
-            onDeleteProduct={handleDeleteProduct}
-            onUpdateOrderStatus={handleUpdateOrderStatus}
-            currentUser={currentUser}
-            chats={chats}
-            messages={messages}
-            onSendMessage={handleSendMessage}
-            onSendPharmacistPrescription={handleSendPharmacistPrescription}
-            onAddToCart={handleAddToCart}
-          />
+          currentUser && (
+            <AdminPanel
+              products={products}
+              orders={orders}
+              users={users}
+              categories={categories}
+              onAddProduct={handleAddProduct}
+              onUpdateProduct={handleUpdateProduct}
+              onDeleteProduct={handleDeleteProduct}
+              onUpdateOrderStatus={handleUpdateOrderStatus}
+              currentUser={currentUser}
+              chats={chats}
+              messages={messages}
+              onSendMessage={handleSendMessage}
+              onSendPharmacistPrescription={handleSendPharmacistPrescription}
+              onAddToCart={handleAddToCart}
+            />
+          )
         )}
       </main>
 
@@ -464,7 +517,7 @@ export default function App() {
                   <h4 className="text-[10px] uppercase font-mono tracking-widest font-black text-zinc-400 mb-1">
                     Description & Conseils d'Utilisation :
                   </h4>
-                  <p className="text-xs text-zinc-600 leading-relaxed font-normal">
+                  <p className="text-xs text-zinc-650 leading-relaxed font-normal">
                     {selectedProduct.description}
                   </p>
                 </div>
@@ -517,7 +570,51 @@ export default function App() {
         onClearCart={handleClearCart}
         currentUser={currentUser}
         onOrderCreated={handleOrderCreated}
+        onRequireLogin={() => {
+          setPendingAction({ type: 'open_cart' });
+          setIsCartOpen(false);
+          setShowLoginModal(true);
+        }}
       />
+
+      {/* ======================================= */}
+      {/* PORTAL: LOGIN ON-DEMAND MODAL OVERLAY  */}
+      {/* ======================================= */}
+      {showLoginModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto font-sans" role="dialog">
+          <div 
+            onClick={() => {
+              setShowLoginModal(false);
+              setPendingAction(null);
+            }} 
+            className="fixed inset-0 bg-zinc-950/75 backdrop-blur-xs cursor-pointer"
+          ></div>
+          <div className="flex items-center justify-center min-h-screen p-4 z-55 relative">
+            <div className="bg-white rounded-[2rem] max-w-lg w-full overflow-hidden shadow-2xl border border-rose-50 relative p-6 animate-scale-up">
+              <button 
+                onClick={() => {
+                  setShowLoginModal(false);
+                  setPendingAction(null);
+                }}
+                className="absolute top-6 right-6 p-2 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-600 transition cursor-pointer"
+                title="Fermer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+              <div className="text-center mb-6">
+                <span className="inline-flex h-12 w-12 rounded-full bg-rose-50 text-rose-500 items-center justify-center mb-2">
+                  <HeartPulse className="h-6 w-6" />
+                </span>
+                <h3 className="text-lg font-bold text-rose-950">Identification Requise</h3>
+                <p className="text-xs text-zinc-500 mt-1 max-w-xs mx-auto">
+                  Veuillez vous identifier pour enregistrer vos produits, dialoguer avec la conseillère beauté ou valider votre commande.
+                </p>
+              </div>
+              <LoginScreen onLogin={handleLogin} isModal={true} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 4. FOOTER CREDITS */}
       <footer className="bg-zinc-900 text-zinc-400 py-8 border-t border-zinc-800 text-xs mt-auto">
