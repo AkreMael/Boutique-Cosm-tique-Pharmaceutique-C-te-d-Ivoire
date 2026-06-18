@@ -87,47 +87,6 @@ export default function Header({
                 Cosmétiques
               </button>
               <button
-                onClick={() => setActiveTab('rental')}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                  activeTab === 'rental'
-                    ? 'bg-rose-50 text-rose-950 font-bold border border-rose-100'
-                    : 'text-zinc-600 hover:text-rose-950 hover:bg-zinc-50'
-                }`}
-              >
-                Immobilier
-              </button>
-              <button
-                onClick={() => setActiveTab('service')}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                  activeTab === 'service'
-                    ? 'bg-rose-50 text-rose-950 font-bold border border-rose-100'
-                    : 'text-zinc-600 hover:text-rose-950 hover:bg-zinc-50'
-                }`}
-              >
-                Services
-              </button>
-              <button
-                onClick={() => setActiveTab('p2p-chat')}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center space-x-1 cursor-pointer ${
-                  activeTab === 'p2p-chat'
-                    ? 'bg-rose-50 text-rose-950 font-bold border border-rose-100'
-                    : 'text-zinc-600 hover:text-rose-950 hover:bg-zinc-50'
-                }`}
-              >
-                <MessageSquare className="h-3.5 w-3.5" />
-                <span>Messagerie P2P</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('profile')}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                  activeTab === 'profile'
-                    ? 'bg-rose-50 text-rose-950 font-bold border border-rose-100'
-                    : 'text-zinc-600 hover:text-rose-950 hover:bg-zinc-50'
-                }`}
-              >
-                Mon Espace
-              </button>
-              <button
                 onClick={() => setActiveTab('diagnostic')}
                 className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center space-x-1 cursor-pointer ${
                   activeTab === 'diagnostic'
@@ -244,38 +203,6 @@ export default function Header({
               }`}
             >
               Cosmétiques
-            </button>
-            <button
-              onClick={() => setActiveTab('rental')}
-              className={`px-2.5 py-1 rounded-full text-[11px] font-bold cursor-pointer ${
-                activeTab === 'rental' ? 'bg-rose-50 text-rose-900 border border-rose-100' : 'text-zinc-650'
-              }`}
-            >
-              Immobilier
-            </button>
-            <button
-              onClick={() => setActiveTab('service')}
-              className={`px-2.5 py-1 rounded-full text-[11px] font-bold cursor-pointer ${
-                activeTab === 'service' ? 'bg-rose-50 text-rose-900 border border-rose-100' : 'text-zinc-650'
-              }`}
-            >
-              Services
-            </button>
-            <button
-              onClick={() => setActiveTab('p2p-chat')}
-              className={`px-2.5 py-1 rounded-full text-[11px] font-bold cursor-pointer ${
-                activeTab === 'p2p-chat' ? 'bg-rose-50 text-rose-900 border border-rose-100' : 'text-zinc-650'
-              }`}
-            >
-              P2P
-            </button>
-            <button
-              onClick={() => setActiveTab('profile')}
-              className={`px-2.5 py-1 rounded-full text-[11px] font-bold cursor-pointer ${
-                activeTab === 'profile' ? 'bg-rose-50 text-rose-900 border border-rose-100' : 'text-zinc-650'
-              }`}
-            >
-              Moi
             </button>
             <button
               onClick={() => setActiveTab('diagnostic')}

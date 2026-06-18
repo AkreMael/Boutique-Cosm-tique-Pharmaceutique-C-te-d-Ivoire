@@ -6,10 +6,6 @@ import PharmacistChat from './components/PharmacistChat';
 import Cart from './components/Cart';
 import AdminPanel from './components/AdminPanel';
 import LoginScreen from './components/LoginScreen';
-import ProfileModule from './components/ProfileModule';
-import RentalModule from './components/RentalModule';
-import ServiceModule from './components/ServiceModule';
-import P2PMessagingModule from './components/P2PMessagingModule';
 import { Product, Category, User, CartItem, Order, ChatSession, ChatMessage, BeautyProfile } from './types';
 import { HeartPulse, Plus, Check, Star, X, Shield, Info, ShoppingBag } from 'lucide-react';
 import { db, collection, doc, onSnapshot, setDoc, query, where, authenticateAnonymous } from './lib/firebase';
@@ -422,34 +418,6 @@ export default function App() {
                 categories={categories}
                 onAddToCart={handleAddToCart}
                 onSelectProductDetails={(product) => setSelectedProduct(product)}
-              />
-            )}
-
-            {activeTab === 'rental' && (
-              <RentalModule
-                currentUser={currentUser}
-                onRequireLogin={() => setShowLoginModal(true)}
-              />
-            )}
-
-            {activeTab === 'service' && (
-              <ServiceModule
-                currentUser={currentUser}
-                onRequireLogin={() => setShowLoginModal(true)}
-              />
-            )}
-
-            {activeTab === 'p2p-chat' && (
-              <P2PMessagingModule
-                currentUser={currentUser}
-                onRequireLogin={() => setShowLoginModal(true)}
-              />
-            )}
-
-            {activeTab === 'profile' && (
-              <ProfileModule
-                currentUser={currentUser}
-                onRequireLogin={() => setShowLoginModal(true)}
               />
             )}
 
