@@ -7,9 +7,12 @@ export interface Product {
   stock: number;
   images: string[];
   category: string;
+  categoryId?: string; // Support categoryId explicitly
   brand: string;
   dateAdded: string;
+  createdAt?: string; // Support createdAt explicitly
   isAvailable: boolean;
+  isActive?: boolean; // Support isActive explicitly
 }
 
 export type CategorySlug =

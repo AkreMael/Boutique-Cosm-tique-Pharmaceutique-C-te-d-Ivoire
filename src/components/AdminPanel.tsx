@@ -298,7 +298,10 @@ export default function AdminPanel({
         stock: prodStock,
         images: [prodImg],
         category: prodCat,
-        brand: prodBrand
+        categoryId: prodCat,
+        brand: prodBrand,
+        isAvailable: prodStock > 0,
+        isActive: prodStock > 0
       });
     } else {
       onAddProduct({
@@ -309,8 +312,11 @@ export default function AdminPanel({
         stock: prodStock,
         images: [prodImg],
         category: prodCat,
+        categoryId: prodCat,
         brand: prodBrand,
-        isAvailable: prodStock > 0
+        isAvailable: prodStock > 0,
+        isActive: prodStock > 0,
+        createdAt: new Date().toISOString()
       });
     }
     

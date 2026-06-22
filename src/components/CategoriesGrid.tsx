@@ -56,12 +56,12 @@ export default function CategoriesGrid({
   };
 
   const getProductCount = (categorySlug: string) => {
-    return products.filter((p) => p.category === categorySlug).length;
+    return products.filter((p) => p.category === categorySlug || p.categoryId === categorySlug).length;
   };
 
   // Filter products by selected category + search query + sort rules
   const filteredProducts = products.filter((p) => {
-    const matchesCategory = activeCategory === 'tous' || p.category === activeCategory;
+    const matchesCategory = activeCategory === 'tous' || p.category === activeCategory || p.categoryId === activeCategory;
     const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           p.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           p.description.toLowerCase().includes(searchQuery.toLowerCase());

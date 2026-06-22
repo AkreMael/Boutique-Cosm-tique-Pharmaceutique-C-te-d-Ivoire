@@ -149,24 +149,32 @@ export default function App() {
     };
   }, [currentUser]);
 
-  // 2.2 Secure Server REST Polling for Products, Categories, Messages, Orders, Chats, and Customers
+  // 2.1 Initial Catalog & Categories One-Time Fallback Fetch (gives instant display on launch)
   useEffect(() => {
-    const fetchFullPlatformData = async () => {
+    const fetchCatalogOnce = async () => {
       try {
-        // 1. Constantly cache / fallback-retrieve Catalog & Categories (guarantees immediately synced display)
         const prodRes = await fetch('/api/products');
         if (prodRes.ok) {
           const prodList = await prodRes.json() as Product[];
-          setProducts(prodList);
+          if (prodList.length > 0) setProducts(prodList);
         }
-
         const catRes = await fetch('/api/categories');
         if (catRes.ok) {
           const catList = await catRes.json() as Category[];
-          setCategories(catList);
+          if (catList.length > 0) setCategories(catList);
         }
+      } catch (err) {
+        console.warn("Catalog initial fetch waiting for backend server initialization...");
+      }
+    };
+    fetchCatalogOnce();
+  }, []);
 
-        // 2. Load authenticated user state lists
+  // 2.2 Secure Server REST Polling for messages, orders, chats, and customers
+  useEffect(() => {
+    const fetchFullPlatformData = async () => {
+      try {
+        // Load authenticated user state lists
         if (currentUser) {
           // Fetch user or admin Orders
           const ordUrl = currentUser.role === 'admin' 
