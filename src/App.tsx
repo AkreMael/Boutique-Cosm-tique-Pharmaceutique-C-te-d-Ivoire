@@ -81,12 +81,18 @@ export default function App() {
     }
   }, [messages, currentUser, isFloatingChatOpen, lastMsgIdTracked]);
 
+  const [isFirebaseAuthed, setIsFirebaseAuthed] = useState<boolean>(false);
+
   // 1. Initial configuration check: load logged-in user session
   useEffect(() => {
     // Authenticate anonymously in background to solve Firestore secure reads under 'auth != null' rules
-    authenticateAnonymous().catch((err) => {
-      console.error("Silent anonymous login fail:", err);
-    });
+    authenticateAnonymous()
+      .then(() => {
+        setIsFirebaseAuthed(true);
+      })
+      .catch((err) => {
+        console.error("Silent anonymous login fail:", err);
+      });
 
     const cached = localStorage.getItem('akwaba_user');
     if (cached) {
@@ -108,7 +114,7 @@ export default function App() {
     setLoading(false);
   }, []);
 
-  // 2. Real-Time Cloud Firestore Continuous Subscriptions (Public Collections)
+  // 2. Real-Time Cloud Firestore Continuous Subscriptions (Public & Authenticated Collections)
   useEffect(() => {
     // 1) Subscribe to Products Collection (Public Read allowed)
     const unsubProducts = onSnapshot(collection(db, "products"), (snap) => {
@@ -118,27 +124,59 @@ export default function App() {
 
     // 2) Subscribe to Categories Collection (Public Read allowed)
     const unsubCategories = onSnapshot(collection(db, "categories"), (snap) => {
-      const list = snap.docs.map(doc => doc.data() as Category);
+      const list = snap.docs.map(doc => {
+        const data = doc.data() as Category;
+        return {
+          slug: doc.id,
+          ...data
+        } as Category;
+      });
       setCategories(list);
     }, (err) => console.error("Realtime Categories Subscribe error:", err));
 
-    // 3) Subscribe to Messages Collection (Authenticated Read allowed)
     let unsubMessages = () => {};
-    if (currentUser) {
+    let unsubUsers = () => {};
+    let unsubOrders = () => {};
+    let unsubChats = () => {};
+
+    if (isFirebaseAuthed && currentUser) {
+      // 3) Subscribe to Messages Collection (Authenticated Read allowed)
       unsubMessages = onSnapshot(collection(db, "messages"), (snap) => {
         const list = snap.docs.map(doc => doc.data() as ChatMessage);
         list.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
         setMessages(list);
       }, (err) => console.error("Realtime Messages Subscribe error:", err));
-    }
 
-    // 4) Subscribe to Users Collection (Admin only)
-    let unsubUsers = () => {};
-    if (currentUser && currentUser.role === 'admin') {
-      unsubUsers = onSnapshot(collection(db, "users"), (snap) => {
-        const list = snap.docs.map(doc => doc.data() as User);
-        setUsers(list);
-      }, (err) => console.error("Realtime Users Subscribe error:", err));
+      // 4) Subscribe to Users Collection (Admin only)
+      if (currentUser.role === 'admin') {
+        unsubUsers = onSnapshot(collection(db, "users"), (snap) => {
+          const list = snap.docs.map(doc => doc.data() as User);
+          setUsers(list);
+        }, (err) => console.error("Realtime Users Subscribe error:", err));
+      }
+
+      // 5) Subscribe to Orders Collection (Real-time updates)
+      const ordersRef = collection(db, "orders");
+      const ordersQuery = currentUser.role === 'admin'
+        ? query(ordersRef)
+        : query(ordersRef, where("userId", "==", currentUser.id));
+
+      unsubOrders = onSnapshot(ordersQuery, (snap) => {
+        const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
+        list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        setOrders(list);
+      }, (err) => console.error("Realtime Orders Subscribe error:", err));
+
+      // 6) Subscribe to Chats Collection (Real-time updates)
+      const chatsRef = collection(db, "chats");
+      const chatsQuery = currentUser.role === 'admin'
+        ? query(chatsRef)
+        : query(chatsRef, where("id", "==", currentUser.id));
+
+      unsubChats = onSnapshot(chatsQuery, (snap) => {
+        const list = snap.docs.map(doc => doc.data() as ChatSession);
+        setChats(list);
+      }, (err) => console.error("Realtime Chats Subscribe error:", err));
     }
 
     return () => {
@@ -146,8 +184,10 @@ export default function App() {
       unsubCategories();
       unsubMessages();
       unsubUsers();
+      unsubOrders();
+      unsubChats();
     };
-  }, [currentUser]);
+  }, [currentUser, isFirebaseAuthed]);
 
   // 2.1 Initial Catalog & Categories One-Time Fallback Fetch (gives instant display on launch)
   useEffect(() => {

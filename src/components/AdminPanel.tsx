@@ -182,6 +182,7 @@ export default function AdminPanel({
   const [prodImg, setProdImg] = useState('https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=600&auto=format&fit=crop');
   const [prodCat, setProdCat] = useState('soins-peau');
   const [prodBrand, setProdBrand] = useState('PharmaPure CI');
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
 
 
 
@@ -667,84 +668,143 @@ export default function AdminPanel({
                 </thead>
                 <tbody className="divide-y divide-rose-50/50 text-xs text-zinc-700">
                   {orders.map((ord) => (
-                    <tr key={ord.id} className="hover:bg-zinc-50/50">
-                      <td className="py-4.5 px-6 font-mono font-bold text-rose-950">{ord.id}</td>
-                      <td className="py-4.5 px-6">
-                        <p className="font-bold">{ord.customerName}</p>
-                        <p className="text-[10px] text-zinc-400 mt-0.5">{ord.customerPhone}</p>
-                      </td>
-                      <td className="py-4.5 px-6 text-zinc-500">
-                        {new Date(ord.date).toLocaleDateString()}
-                      </td>
-                      <td className="py-4.5 px-6 font-medium">
-                        {ord.city}
-                      </td>
-                      <td className="py-4.5 px-6 text-right font-extrabold text-rose-800">
-                        {ord.total.toLocaleString()} CFA
-                      </td>
-                      <td className="py-4.5 px-6 text-center">
-                        <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase inline-block ${
-                          ord.status === 'Livrée' ? 'bg-emerald-100 text-emerald-800' :
-                          ord.status === 'En livraison' ? 'bg-indigo-100 text-indigo-800' :
-                          ord.status === 'Préparation' ? 'bg-amber-100 text-amber-800' :
-                          ord.status === 'Annulée' ? 'bg-red-100 text-red-800' :
-                          'bg-zinc-100 text-zinc-800'
-                        }`}>
-                          {ord.status}
-                        </span>
-                      </td>
+                    <React.Fragment key={ord.id}>
+                      <tr 
+                        className="hover:bg-rose-50/5 cursor-pointer transition-colors"
+                        onClick={() => setExpandedOrderId(expandedOrderId === ord.id ? null : ord.id)}
+                      >
+                        <td className="py-4.5 px-6 font-mono font-bold text-rose-955 flex items-center space-x-1.5">
+                          <span className="text-[10px] text-rose-800 shrink-0 select-none">
+                            {expandedOrderId === ord.id ? '▼' : '▶'}
+                          </span>
+                          <span className="truncate max-w-[80px]" title={ord.id}>{ord.id}</span>
+                        </td>
+                        <td className="py-4.5 px-6">
+                          <p className="font-bold">{ord.customerName}</p>
+                          <p className="text-[10px] text-zinc-400 mt-0.5">{ord.customerPhone}</p>
+                        </td>
+                        <td className="py-4.5 px-6 text-zinc-500">
+                          {new Date(ord.date).toLocaleDateString()}
+                        </td>
+                        <td className="py-4.5 px-6 font-medium">
+                          {ord.city}
+                        </td>
+                        <td className="py-4.5 px-6 text-right font-extrabold text-rose-800">
+                          {ord.total.toLocaleString()} CFA
+                        </td>
+                        <td className="py-4.5 px-6 text-center">
+                          <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase inline-block ${
+                            ord.status === 'Livrée' ? 'bg-emerald-100 text-emerald-800' :
+                            ord.status === 'En livraison' ? 'bg-indigo-100 text-indigo-800' :
+                            ord.status === 'Préparation' ? 'bg-amber-100 text-amber-800' :
+                            ord.status === 'Annulée' ? 'bg-red-100 text-red-800' :
+                            'bg-zinc-100 text-zinc-800'
+                          }`}>
+                            {ord.status}
+                          </span>
+                        </td>
+                        
+                        {/* Interactive Stage triggers */}
+                        <td className="py-4.5 px-6 text-center" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-center space-x-2">
+                            {ord.status === 'En attente' && (
+                              <button
+                                onClick={() => onUpdateOrderStatus(ord.id, 'Confirmée')}
+                                className="px-2 py-1 bg-green-105 text-emerald-800 rounded font-bold text-[9px] uppercase border hover:bg-emerald-200"
+                              >
+                                Confirmer
+                              </button>
+                            )}
+                            {ord.status === 'Confirmée' && (
+                              <button
+                                onClick={() => onUpdateOrderStatus(ord.id, 'Préparation')}
+                                className="px-2 py-1 bg-amber-100 text-amber-800 rounded font-bold text-[9px] uppercase hover:bg-amber-150"
+                              >
+                                Préparer
+                              </button>
+                            )}
+                            {ord.status === 'Préparation' && (
+                              <button
+                                onClick={() => onUpdateOrderStatus(ord.id, 'En livraison')}
+                                className="px-2 py-1 bg-indigo-600 text-white rounded font-bold text-[9px] uppercase flex items-center space-x-1 hover:bg-indigo-700"
+                              >
+                                <Truck className="h-3 w-3 inline" />
+                                <span>Expédier</span>
+                              </button>
+                            )}
+                            {ord.status === 'En livraison' && (
+                              <button
+                                onClick={() => onUpdateOrderStatus(ord.id, 'Livrée')}
+                                className="px-2 py-1 bg-emerald-600 text-white rounded font-bold text-[9px] uppercase hover:bg-emerald-700"
+                              >
+                                Terminer
+                              </button>
+                            )}
+                            {ord.status !== 'Livrée' && ord.status !== 'Annulée' && (
+                              <button
+                                onClick={() => onUpdateOrderStatus(ord.id, 'Annulée')}
+                                className="px-2 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded font-bold text-[9px] uppercase"
+                                title="Annuler"
+                              >
+                                Annuler
+                              </button>
+                            )}
+                            {(ord.status === 'Livrée' || ord.status === 'Annulée') && (
+                              <span className="text-[10px] text-zinc-400 font-mono">— Clôturée</span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
                       
-                      {/* Interactive Stage triggers */}
-                      <td className="py-4.5 px-6 text-center">
-                        <div className="flex items-center justify-center space-x-2">
-                          {ord.status === 'En attente' && (
-                            <button
-                              onClick={() => onUpdateOrderStatus(ord.id, 'Confirmée')}
-                              className="px-2 py-1 bg-green-100 text-green-800 rounded font-bold text-[9px] uppercase"
-                            >
-                              Confirmer
-                            </button>
-                          )}
-                          {ord.status === 'Confirmée' && (
-                            <button
-                              onClick={() => onUpdateOrderStatus(ord.id, 'Préparation')}
-                              className="px-2 py-1 bg-yellow-105 text-amber-800 rounded font-bold text-[9px] uppercase border"
-                            >
-                              Préparer
-                            </button>
-                          )}
-                          {ord.status === 'Préparation' && (
-                            <button
-                              onClick={() => onUpdateOrderStatus(ord.id, 'En livraison')}
-                              className="px-2 py-1 bg-indigo-600 text-white rounded font-bold text-[9px] uppercase flex items-center space-x-1"
-                            >
-                              <Truck className="h-3 w-3 inline" />
-                              <span>Expédier</span>
-                            </button>
-                          )}
-                          {ord.status === 'En livraison' && (
-                            <button
-                              onClick={() => onUpdateOrderStatus(ord.id, 'Livrée')}
-                              className="px-2 py-1 bg-emerald-600 text-white rounded font-bold text-[9px] uppercase"
-                            >
-                              Terminer
-                            </button>
-                          )}
-                          {ord.status !== 'Livrée' && ord.status !== 'Annulée' && (
-                            <button
-                              onClick={() => onUpdateOrderStatus(ord.id, 'Annulée')}
-                              className="px-2 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded font-bold text-[9px] uppercase"
-                              title="Annuler"
-                            >
-                              Annuler
-                            </button>
-                          )}
-                          {(ord.status === 'Livrée' || ord.status === 'Annulée') && (
-                            <span className="text-[10px] text-zinc-400 font-mono">— Clôturée</span>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
+                      {/* Expanded Articles details drawer */}
+                      {expandedOrderId === ord.id && (
+                        <tr className="bg-rose-50/5">
+                          <td colSpan={7} className="py-4 px-6 border-b border-rose-100/50">
+                            <div className="text-left space-y-4">
+                              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start bg-white p-3.5 rounded-2xl border border-rose-100/30 gap-3">
+                                <div>
+                                  <span className="text-[10px] uppercase font-mono tracking-wider font-extrabold text-rose-950 block">Adresse de Livraison :</span>
+                                  <p className="text-zinc-600 font-medium text-xs mt-1">
+                                    {ord.city} — {ord.address || "Aucune rue fournie"}
+                                  </p>
+                                </div>
+                                <div className="text-left sm:text-right">
+                                  <span className="text-[10px] uppercase font-mono tracking-wider font-extrabold text-rose-950 block">Email & Méthode :</span>
+                                  <p className="text-zinc-600 font-medium text-xs mt-1">
+                                    {ord.customerEmail || "Non renseigné"} • {ord.paymentMethod}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div>
+                                <span className="text-[10px] uppercase font-mono tracking-wider font-bold text-rose-950 block mb-2.5">Détail des Articles Commandés ({ord.items ? ord.items.length : 0}) :</span>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                                  {ord.items && ord.items.map((item: any, idx: number) => (
+                                    <div key={idx} className="flex items-center p-3 rounded-2xl bg-white border border-rose-100/30">
+                                      <img
+                                        referrerPolicy="no-referrer"
+                                        src={item.image || "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=200&auto=format&fit=crop"}
+                                        alt={item.name}
+                                        className="h-12 w-12 object-cover rounded-xl mr-3 border shrink-0"
+                                      />
+                                      <div className="flex-1 min-w-0 pr-2">
+                                        <p className="font-bold text-rose-950 text-xs truncate">{item.name}</p>
+                                        <p className="text-[10px] text-zinc-400 mt-1">
+                                          {item.price.toLocaleString()} CFA × <span className="text-rose-900 font-black">{item.quantity}</span>
+                                        </p>
+                                      </div>
+                                      <div className="text-right shrink-0">
+                                        <p className="font-black text-rose-950 text-xs text-nowrap">{(item.price * item.quantity).toLocaleString()} CFA</p>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   ))}
 
                   {orders.length === 0 && (
@@ -1053,11 +1113,25 @@ export default function AdminPanel({
                   const pct = Math.round(((p.price - (p.promoPrice || p.price)) / p.price) * 100);
                   return (
                     <div key={p.id} className="p-4 rounded-xl bg-rose-50/10 border border-rose-100 flex justify-between items-center">
-                      <div>
-                        <p className="font-bold text-rose-950 text-xs truncate max-w-[170px]">{p.name}</p>
+                      <div className="min-w-0 flex-1 mr-2 text-left">
+                        <p className="font-bold text-rose-950 text-xs truncate">{p.name}</p>
                         <p className="text-[10px] text-zinc-400 mt-1">Normal: {p.price} CFA • Promo: <span className="text-rose-700 font-extrabold">{p.promoPrice} CFA</span></p>
                       </div>
-                      <span className="px-2 py-1 bg-rose-200 border border-rose-300 rounded font-black text-rose-800 text-[10px]">{pct}% rabais</span>
+                      <div className="flex flex-col items-end space-y-1 shrink-0">
+                        <span className="px-2 py-0.5 bg-rose-200 border border-rose-300 rounded font-black text-rose-800 text-[9px]">{pct}% rabais</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onUpdateProduct({
+                              ...p,
+                              promoPrice: undefined
+                            });
+                          }}
+                          className="text-[9px] font-bold text-rose-600 hover:text-rose-900 cursor-pointer underline"
+                        >
+                          Retirer
+                        </button>
+                      </div>
                     </div>
                   );
                 })}

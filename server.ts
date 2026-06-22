@@ -630,9 +630,38 @@ app.post("/api/products", async (req, res) => {
 app.put("/api/products/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    await adminDb.collection("products").doc(id).update(req.body);
-    const snap = await adminDb.collection("products").doc(id).get();
-    res.json({ id, ...snap.data() });
+    const existingDoc = await adminDb.collection("products").doc(id).get();
+    if (!existingDoc.exists) {
+      return res.status(404).json({ error: "Produit non trouvé" });
+    }
+    const currentData = existingDoc.data() || {};
+    const updatedProduct = {
+      ...currentData,
+      ...req.body
+    };
+
+    // If promoPrice is null, undefined, empty string or <= 0, remove it from the document
+    if (
+      req.body.promoPrice === undefined ||
+      req.body.promoPrice === null ||
+      req.body.promoPrice === "" ||
+      Number(req.body.promoPrice) <= 0
+    ) {
+      delete updatedProduct.promoPrice;
+    } else {
+      updatedProduct.promoPrice = Number(req.body.promoPrice);
+    }
+
+    // Cast other fields to their proper types
+    if (updatedProduct.price) updatedProduct.price = Number(updatedProduct.price);
+    if (updatedProduct.stock !== undefined) {
+      updatedProduct.stock = Number(updatedProduct.stock);
+      updatedProduct.isAvailable = updatedProduct.stock > 0;
+      updatedProduct.isActive = updatedProduct.stock > 0;
+    }
+
+    await adminDb.collection("products").doc(id).set(updatedProduct);
+    res.json(updatedProduct);
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }
@@ -683,16 +712,23 @@ app.post("/api/categories", async (req, res) => {
 app.put("/api/categories/:slug", async (req, res) => {
   try {
     const { slug } = req.params;
-    const updateData = { ...req.body };
+    const existingDoc = await adminDb.collection("categories").doc(slug).get();
+    if (!existingDoc.exists) {
+      return res.status(404).json({ error: "Catégorie non trouvée" });
+    }
+    const currentData = existingDoc.data() || {};
+    const updateData = {
+      ...currentData,
+      ...req.body
+    };
     // make sure we keep consistency between image and imageUrl if either is passed
     if (updateData.imageUrl && !updateData.image) {
       updateData.image = updateData.imageUrl;
     } else if (updateData.image && !updateData.imageUrl) {
       updateData.imageUrl = updateData.image;
     }
-    await adminDb.collection("categories").doc(slug).update(updateData);
-    const snap = await adminDb.collection("categories").doc(slug).get();
-    res.json({ slug, ...snap.data() });
+    await adminDb.collection("categories").doc(slug).set(updateData);
+    res.json(updateData);
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }
@@ -1140,7 +1176,7 @@ app.get("/api/admin/statistics", async (req, res) => {
 
     const ordersCount = orders.length;
     const revenue = orders
-      .filter((o: any) => o.paymentStatus === "Payé" && o.status !== "Annulée")
+      .filter((o: any) => o.status !== "Annulée")
       .reduce((sum: number, o: any) => sum + o.total, 0);
 
     const conversionRate = Math.min(15, parseFloat((4.5 + (ordersCount * 0.4)).toFixed(1)));
