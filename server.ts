@@ -635,11 +635,18 @@ app.get("/api/categories", async (req, res) => {
 
 app.post("/api/categories", async (req, res) => {
   try {
-    const { slug, name, description, icon } = req.body;
+    const { slug, name, description, icon, imageUrl, image } = req.body;
     if (!slug || !name) {
       return res.status(400).json({ error: "Slug and Name are required" });
     }
-    const newCategory = { slug, name, description: description || "", icon: icon || "Sparkles" };
+    const newCategory = { 
+      slug, 
+      name, 
+      description: description || "", 
+      icon: icon || "Sparkles",
+      imageUrl: imageUrl || "",
+      image: image || imageUrl || ""
+    };
     await adminDb.collection("categories").doc(slug).set(newCategory);
     res.status(201).json(newCategory);
   } catch (err) {

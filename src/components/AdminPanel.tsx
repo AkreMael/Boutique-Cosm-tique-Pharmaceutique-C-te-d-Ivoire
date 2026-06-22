@@ -224,11 +224,21 @@ export default function AdminPanel({
         setCatDescInput('');
         setCatImageUrlInput('');
       } else {
-        const data = await res.json();
-        setCatError(data.error || 'Erreur lors de la création');
+        let errorMessage = 'Erreur lors de la création';
+        try {
+          const data = await res.json();
+          errorMessage = data.error || errorMessage;
+        } catch {
+          try {
+            const txt = await res.text();
+            errorMessage = txt || errorMessage;
+          } catch {}
+        }
+        setCatError(errorMessage);
       }
-    } catch {
-      setCatError('Une erreur réseau est survenue.');
+    } catch (err: any) {
+      console.error("Erreur d'ajout de catégorie:", err);
+      setCatError(`Une erreur est survenue lors de l'ajout: ${err.message || err}`);
     }
   };
 
@@ -243,11 +253,21 @@ export default function AdminPanel({
       if (res.ok) {
         setCatSuccess('Catégorie supprimée avec succès !');
       } else {
-        const data = await res.json();
-        setCatError(data.error || 'Erreur lors de la suppression');
+        let errorMessage = 'Erreur lors de la suppression';
+        try {
+          const data = await res.json();
+          errorMessage = data.error || errorMessage;
+        } catch {
+          try {
+            const txt = await res.text();
+            errorMessage = txt || errorMessage;
+          } catch {}
+        }
+        setCatError(errorMessage);
       }
-    } catch {
-      setCatError('Une erreur réseau est survenue.');
+    } catch (err: any) {
+      console.error("Erreur de suppression de catégorie:", err);
+      setCatError(`Une erreur est survenue lors de la suppression: ${err.message || err}`);
     }
   };
 
