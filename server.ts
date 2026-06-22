@@ -680,6 +680,24 @@ app.post("/api/categories", async (req, res) => {
   }
 });
 
+app.put("/api/categories/:slug", async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const updateData = { ...req.body };
+    // make sure we keep consistency between image and imageUrl if either is passed
+    if (updateData.imageUrl && !updateData.image) {
+      updateData.image = updateData.imageUrl;
+    } else if (updateData.image && !updateData.imageUrl) {
+      updateData.imageUrl = updateData.image;
+    }
+    await adminDb.collection("categories").doc(slug).update(updateData);
+    const snap = await adminDb.collection("categories").doc(slug).get();
+    res.json({ slug, ...snap.data() });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
 app.delete("/api/categories/:slug", async (req, res) => {
   try {
     const { slug } = req.params;

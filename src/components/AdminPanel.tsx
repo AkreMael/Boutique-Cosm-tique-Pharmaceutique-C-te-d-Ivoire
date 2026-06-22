@@ -197,6 +197,60 @@ export default function AdminPanel({
   const [catError, setCatError] = useState('');
   const [catSuccess, setCatSuccess] = useState('');
 
+  // Category Edit states
+  const [editCategory, setEditCategory] = useState<Category | null>(null);
+  const [showCategoryEditModal, setShowCategoryEditModal] = useState(false);
+  const [editCatName, setEditCatName] = useState('');
+  const [editCatDesc, setEditCatDesc] = useState('');
+  const [editCatImageUrl, setEditCatImageUrl] = useState('');
+
+  const handleOpenEditCategory = (cat: Category) => {
+    setEditCategory(cat);
+    setEditCatName(cat.name);
+    setEditCatDesc(cat.description || '');
+    setEditCatImageUrl(cat.imageUrl || cat.image || '');
+    setShowCategoryEditModal(true);
+  };
+
+  const handleUpdateCategorySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editCategory) return;
+    setCatError('');
+    setCatSuccess('');
+    try {
+      const res = await fetch(`/api/categories/${editCategory.slug}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editCatName.trim(),
+          description: editCatDesc.trim(),
+          imageUrl: editCatImageUrl.trim(),
+          image: editCatImageUrl.trim()
+        })
+      });
+      if (res.ok) {
+        setCatSuccess('Catégorie mise à jour avec succès !');
+        setShowCategoryEditModal(false);
+        setEditCategory(null);
+      } else {
+        let errorMessage = 'Erreur lors de la mise à jour';
+        try {
+          const data = await res.json();
+          errorMessage = data.error || errorMessage;
+        } catch {
+          try {
+            const txt = await res.text();
+            errorMessage = txt || errorMessage;
+          } catch {}
+        }
+        setCatError(errorMessage);
+      }
+    } catch (err: any) {
+      console.error("Erreur de mise à jour de catégorie:", err);
+      setCatError(`Une erreur est survenue lors de la mise à jour: ${err.message || err}`);
+    }
+  };
+
   const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     setCatError('');
@@ -747,12 +801,17 @@ export default function AdminPanel({
                   </thead>
                   <tbody className="divide-y divide-rose-50/50 text-xs text-zinc-700">
                     {products.map((p) => (
-                      <tr key={p.id} className="hover:bg-zinc-50/50">
+                      <tr 
+                        key={p.id} 
+                        className="hover:bg-rose-50/10 cursor-pointer transition-colors"
+                        onClick={() => handleOpenEditProduct(p)}
+                        title="Cliquer pour modifier cet article"
+                      >
                         <td className="py-3 px-6">
                           <img src={p.images[0]} alt={p.name} className="h-10 w-10 object-cover rounded-xl border border-rose-50" />
                         </td>
                         <td className="py-3 px-6 font-bold text-rose-950 max-w-[280px]">
-                          <p className="truncate" title={p.name}>{p.name}</p>
+                          <p className="truncate text-sm" title={p.name}>{p.name}</p>
                           <p className="text-[10px] text-zinc-400 font-normal truncate mt-0.5">{p.description}</p>
                         </td>
                         <td className="py-3 px-6 font-mono capitalize">{p.category.replace('-', ' ')}</td>
@@ -776,14 +835,20 @@ export default function AdminPanel({
                         <td className="py-3 px-6 text-center">
                           <div className="flex items-center justify-center space-x-2">
                             <button
-                              onClick={() => handleOpenEditProduct(p)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenEditProduct(p);
+                              }}
                               className="p-1.5 text-zinc-500 hover:text-rose-950 hover:bg-zinc-100 rounded-lg transition"
                               title="Modifier"
                             >
                               <Edit className="h-4 w-4" />
                             </button>
                             <button
-                              onClick={() => onDeleteProduct(p.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDeleteProduct(p.id);
+                              }}
                               className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
                               title="Retirer complètement"
                             >
@@ -1102,7 +1167,12 @@ export default function AdminPanel({
                 {categories.map((cat) => {
                   const productCount = products.filter(p => p.category === cat.slug || p.categoryId === cat.slug).length;
                   return (
-                    <div key={cat.slug} className="p-5 rounded-2xl bg-zinc-55 border border-zinc-150 relative transition hover:shadow-xs group flex flex-col justify-between">
+                    <div 
+                      key={cat.slug} 
+                      onClick={() => handleOpenEditCategory(cat)}
+                      className="p-5 rounded-2xl bg-zinc-55 border border-zinc-150 hover:border-rose-300 hover:bg-rose-50/5 relative transition hover:shadow-xs group flex flex-col justify-between cursor-pointer"
+                      title="Cliquer pour modifier cette catégorie"
+                    >
                       <div>
                         <div className="flex items-center space-x-3 mb-2.5">
                           <div className="p-2.5 bg-rose-50 rounded-xl text-rose-600">
@@ -1118,20 +1188,118 @@ export default function AdminPanel({
 
                       <div className="mt-4 pt-3.5 border-t border-zinc-100 flex items-center justify-between">
                         <span className="px-2.5 py-1 rounded bg-zinc-100 text-zinc-600 font-extrabold text-[10px]">{productCount} article{productCount > 1 ? 's' : ''}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteCategory(cat.slug)}
-                          className="text-zinc-400 hover:text-red-600 p-1 rounded-lg transition"
-                          title="Supprimer la catégorie"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        <div className="flex items-center space-x-1.5">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenEditCategory(cat);
+                            }}
+                            className="p-1.5 text-zinc-400 hover:text-rose-950 hover:bg-zinc-100 rounded-lg transition"
+                            title="Modifier la catégorie"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteCategory(cat.slug);
+                            }}
+                            className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                            title="Supprimer la catégorie"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );
                 })}
               </div>
             </div>
+
+            {/* CATEGORY EDIT MODAL */}
+            {showCategoryEditModal && editCategory && (
+              <div className="fixed inset-0 z-50 overflow-y-auto" role="dialog">
+                <div onClick={() => { setShowCategoryEditModal(false); setEditCategory(null); }} className="fixed inset-0 bg-zinc-900/60 backdrop-blur-xs"></div>
+                <div className="flex items-center justify-center min-h-screen p-4 z-55 relative">
+                  <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-xl space-y-4 text-left border border-rose-100">
+                    <div className="flex justify-between items-center pb-2 border-b">
+                      <h4 className="font-bold text-rose-950 text-sm flex items-center space-x-2">
+                        <FolderOpen className="h-4 w-4 text-rose-600" />
+                        <span>Modifier la Catégorie : {editCategory.name}</span>
+                      </h4>
+                      <button onClick={() => { setShowCategoryEditModal(false); setEditCategory(null); }} className="p-1 text-zinc-400 hover:text-rose-950">
+                        <X className="h-5 w-5" />
+                      </button>
+                    </div>
+
+                    <form onSubmit={handleUpdateCategorySubmit} className="space-y-4 text-xs font-sans">
+                      <div>
+                        <label className="block text-zinc-700 font-bold mb-1">Identifiant technique (Slug - Non modifiable)</label>
+                        <input
+                          type="text"
+                          disabled
+                          value={editCategory.slug}
+                          className="w-full p-3 bg-zinc-100 border border-zinc-200 rounded-xl text-zinc-500 font-mono cursor-not-allowed"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-zinc-700 font-bold mb-1">Nom de la catégorie *</label>
+                        <input
+                          type="text"
+                          required
+                          value={editCatName}
+                          onChange={(e) => setEditCatName(e.target.value)}
+                          placeholder="Nom de la catégorie"
+                          className="w-full p-3 bg-zinc-50 border border-zinc-200 rounded-xl"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-zinc-700 font-bold mb-1">Description</label>
+                        <textarea
+                          rows={3}
+                          value={editCatDesc}
+                          onChange={(e) => setEditCatDesc(e.target.value)}
+                          placeholder="Description de la catégorie..."
+                          className="w-full p-3 bg-zinc-50 border border-zinc-200 rounded-xl"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-zinc-700 font-bold mb-1">URL de l'image de la catégorie</label>
+                        <input
+                          type="text"
+                          value={editCatImageUrl}
+                          onChange={(e) => setEditCatImageUrl(e.target.value)}
+                          placeholder="https://images.unsplash.com/..."
+                          className="w-full p-3 bg-zinc-50 border border-zinc-200 rounded-xl"
+                        />
+                      </div>
+
+                      <div className="pt-2 flex justify-end gap-2.5">
+                        <button
+                          type="button"
+                          onClick={() => { setShowCategoryEditModal(false); setEditCategory(null); }}
+                          className="px-4 py-2.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-bold rounded-xl"
+                        >
+                          Annuler
+                        </button>
+                        <button
+                          type="submit"
+                          className="px-6 py-2.5 bg-rose-950 hover:bg-rose-900 text-white font-bold rounded-xl transition shadow-sm"
+                        >
+                          Sauvegarder
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
