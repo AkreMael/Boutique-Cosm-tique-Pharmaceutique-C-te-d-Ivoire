@@ -13,15 +13,10 @@ export interface Product {
 }
 
 export type CategorySlug =
-  | 'soins-visage'
-  | 'soins-corps'
-  | 'maquillage'
-  | 'produits-capillaires'
-  | 'parfums'
-  | 'hygiene'
-  | 'beaute-naturelle'
-  | 'accessoires-beaute'
-  | 'promotions';
+  | 'soins-peau'
+  | 'cremes-soins'
+  | 'pommades-traitements'
+  | 'produits-capillaires';
 
 export interface Category {
   slug: CategorySlug;

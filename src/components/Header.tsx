@@ -48,7 +48,7 @@ export default function Header({
           <div 
             onClick={() => {
               if (!currentUser || currentUser.role === 'client' || adminViewMode === 'client') {
-                setActiveTab('catalog');
+                setActiveTab('home');
               }
             }} 
             className="flex items-center space-x-3 cursor-pointer select-none"
@@ -77,35 +77,54 @@ export default function Header({
                 </button>
               )}
               <button
-                onClick={() => setActiveTab('catalog')}
+                onClick={() => setActiveTab('home')}
                 className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                  activeTab === 'catalog'
+                  activeTab === 'home'
                     ? 'bg-rose-50 text-rose-950 font-bold border border-rose-100'
                     : 'text-zinc-600 hover:text-rose-950 hover:bg-zinc-50'
                 }`}
               >
-                Cosmétiques
+                Accueil
               </button>
               <button
-                onClick={() => setActiveTab('diagnostic')}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center space-x-1 cursor-pointer ${
-                  activeTab === 'diagnostic'
-                    ? 'bg-gradient-to-r from-rose-500 to-rose-600 text-white font-bold shadow-sm'
-                    : 'text-zinc-600 hover:text-rose-950 hover:bg-rose-50/50'
-                }`}
-              >
-                <Sparkles className="h-3.5 w-3.5" />
-                <span>Diagnostic Peau</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('chat')}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center space-x-1 relative cursor-pointer ${
-                  activeTab === 'chat'
+                onClick={() => setActiveTab('categories')}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                  activeTab === 'categories'
                     ? 'bg-rose-50 text-rose-950 font-bold border border-rose-100'
                     : 'text-zinc-600 hover:text-rose-950 hover:bg-zinc-50'
                 }`}
               >
-                <span>Conseils Rituels</span>
+                Catégories
+              </button>
+              <button
+                onClick={() => setActiveTab('offers')}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                  activeTab === 'offers'
+                    ? 'bg-rose-50 text-rose-950 font-bold border border-rose-100'
+                    : 'text-zinc-600 hover:text-rose-950 hover:bg-zinc-50'
+                }`}
+              >
+                Offres
+              </button>
+              <button
+                onClick={() => setActiveTab('cart')}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                  activeTab === 'cart'
+                    ? 'bg-rose-50 text-rose-950 font-bold border border-rose-100'
+                    : 'text-zinc-600 hover:text-rose-950 hover:bg-zinc-50'
+                }`}
+              >
+                Panier ({cartCount})
+              </button>
+              <button
+                onClick={() => setActiveTab('profile')}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                  activeTab === 'profile'
+                    ? 'bg-rose-50 text-rose-950 font-bold border border-rose-100'
+                    : 'text-zinc-600 hover:text-rose-950 hover:bg-zinc-50'
+                }`}
+              >
+                Profil
               </button>
             </nav>
           ) : (
@@ -184,34 +203,15 @@ export default function Header({
 
         </div>
 
-        {/* Mobile Navigation bar - seen by Clients or Admin in preview mode */}
-        {(!currentUser || currentUser.role === 'client' || adminViewMode === 'client') && (
-          <div className="flex md:hidden items-center justify-center space-x-2 py-3 border-t border-rose-50">
-            {currentUser?.role === 'admin' && (
-              <button
-                onClick={() => setAdminViewMode?.('admin')}
-                className="px-2.5 py-1.5 rounded-full text-[10px] font-black bg-zinc-950 text-white flex items-center space-x-1 cursor-pointer"
-              >
-                <ShieldCheck className="h-3 w-3 text-emerald-400" />
-                <span>ADMIN</span>
-              </button>
-            )}
+        {/* Mobile quick access button - ONLY admin switch button when looking at client mode */}
+        {currentUser?.role === 'admin' && adminViewMode === 'client' && (
+          <div className="flex md:hidden items-center justify-center space-x-2 py-2 border-t border-rose-50 bg-rose-50/20">
             <button
-              onClick={() => setActiveTab('catalog')}
-              className={`px-2.5 py-1 rounded-full text-[11px] font-bold cursor-pointer ${
-                activeTab === 'catalog' ? 'bg-rose-50 text-rose-900 border border-rose-100' : 'text-zinc-650'
-              }`}
+              onClick={() => setAdminViewMode?.('admin')}
+              className="px-3 py-1.5 rounded-full text-[9px] font-black bg-zinc-950 text-white flex items-center space-x-1 cursor-pointer"
             >
-              Cosmétiques
-            </button>
-            <button
-              onClick={() => setActiveTab('diagnostic')}
-              className={`px-2 py-1 rounded-full text-[10px] font-black flex items-center space-x-0.5 cursor-pointer ${
-                activeTab === 'diagnostic' ? 'bg-gradient-to-r from-rose-500 to-rose-600 text-white' : 'text-zinc-650'
-              }`}
-            >
-              <Sparkles className="h-3 w-3" />
-              <span>Peau</span>
+              <ShieldCheck className="h-3 w-3 text-emerald-400" />
+              <span>QUITTER L'APERÇU CLIENT</span>
             </button>
           </div>
         )}

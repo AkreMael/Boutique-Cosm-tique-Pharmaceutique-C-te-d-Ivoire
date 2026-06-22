@@ -6,13 +6,20 @@ import PharmacistChat from './components/PharmacistChat';
 import Cart from './components/Cart';
 import AdminPanel from './components/AdminPanel';
 import LoginScreen from './components/LoginScreen';
+import Home from './components/Home';
+import CategoriesGrid from './components/CategoriesGrid';
+import OffersScreen from './components/OffersScreen';
+import CartScreen from './components/CartScreen';
+import ProfileScreen from './components/ProfileScreen';
 import { Product, Category, User, CartItem, Order, ChatSession, ChatMessage, BeautyProfile } from './types';
-import { HeartPulse, Plus, Check, Star, X, Shield, Info, ShoppingBag, MessageSquare, Send, Sparkles } from 'lucide-react';
+import { HeartPulse, Plus, Check, Star, X, Shield, Info, ShoppingBag, MessageSquare, Send, Sparkles, Home as HomeIcon, Grid3X3, BadgePercent, ShoppingCart as BottomCartIcon, User as UserIcon } from 'lucide-react';
 import { db, collection, doc, onSnapshot, setDoc, query, where, authenticateAnonymous } from './lib/firebase';
 
 export default function App() {
-  // Navigation tabs
-  const [activeTab, setActiveTab] = useState<string>('catalog');
+  // Navigation tabs - Default with home (Accueil) per full-UI overhaul guidelines
+  const [activeTab, setActiveTab] = useState<string>('home');
+  const [preselectedCategory, setPreselectedCategory] = useState<any>('tous');
+  const [globalSearchQuery, setGlobalSearchQuery] = useState<string>('');
   const [adminViewMode, setAdminViewMode] = useState<'admin' | 'client'>('admin');
 
   // Authentication & Loading States
@@ -205,7 +212,8 @@ export default function App() {
           }
         }
       } catch (err) {
-        console.error("Platform background REST synchronization error:", err);
+        // Soft warning to handle brief offline states or server restarts gracefully without flooding console.error
+        console.warn("Background sync waiting for backend server initialization...");
       }
     };
 
@@ -476,6 +484,69 @@ export default function App() {
       <main className="flex-1">
         {(!currentUser || currentUser.role === 'client' || adminViewMode === 'client') ? (
           <>
+            {activeTab === 'home' && (
+              <Home
+                products={products}
+                categories={categories}
+                onAddToCart={handleAddToCart}
+                onSelectProductDetails={(product) => setSelectedProduct(product)}
+                onSwitchTab={(tab, arg) => {
+                  if (tab === 'categories' && arg) {
+                    setPreselectedCategory(arg);
+                  }
+                  setActiveTab(tab);
+                }}
+                currentSearchQuery={globalSearchQuery}
+                setGlobalSearchQuery={setGlobalSearchQuery}
+              />
+            )}
+
+            {activeTab === 'categories' && (
+              <CategoriesGrid
+                products={products}
+                categories={categories}
+                onAddToCart={handleAddToCart}
+                onSelectProductDetails={(product) => setSelectedProduct(product)}
+                preselectedCategorySlug={preselectedCategory}
+                setPreselectedCategorySlug={setPreselectedCategory}
+              />
+            )}
+
+            {activeTab === 'offers' && (
+              <OffersScreen
+                products={products}
+                onAddToCart={handleAddToCart}
+                onSelectProductDetails={(product) => setSelectedProduct(product)}
+                onSwitchTab={(tab) => setActiveTab(tab)}
+              />
+            )}
+
+            {activeTab === 'cart' && (
+              <CartScreen
+                cart={cart}
+                onUpdateQuantity={handleUpdateCartQuantity}
+                onRemoveItem={handleRemoveFromCart}
+                onClearCart={handleClearCart}
+                currentUser={currentUser}
+                onOrderCreated={handleOrderCreated || ((o) => console.log(o))}
+                onRequireLogin={() => {
+                  setPendingAction({ type: 'switch_tab', tab: 'cart' });
+                  setShowLoginModal(true);
+                }}
+                onSwitchTab={(tab) => setActiveTab(tab)}
+              />
+            )}
+
+            {activeTab === 'profile' && (
+              <ProfileScreen
+                currentUser={currentUser}
+                orders={orders}
+                onLogin={handleLogin}
+                onLogout={handleLogout}
+                onSwitchTab={(tab) => setActiveTab(tab)}
+              />
+            )}
+
             {activeTab === 'catalog' && (
               <Catalog
                 products={products}
@@ -849,7 +920,7 @@ export default function App() {
               setIsFloatingChatOpen(!isFloatingChatOpen);
               setShowNewMsgToast(false);
             }}
-            className="fixed bottom-6 right-6 h-14 w-14 bg-gradient-to-r from-rose-500 to-rose-600 rounded-full flex items-center justify-center text-white shadow-lg shadow-rose-300 hover:scale-105 active:scale-95 transition cursor-pointer z-50 flex-shrink-0"
+            className="fixed bottom-22 right-6 h-14 w-14 bg-gradient-to-r from-rose-500 to-rose-600 rounded-full flex items-center justify-center text-white shadow-lg shadow-rose-300 hover:scale-105 active:scale-95 transition cursor-pointer z-50 flex-shrink-0"
             title="Aide & Conseils Beauté"
             aria-label="Contacter la conseillère"
           >
@@ -864,6 +935,67 @@ export default function App() {
 
         </div>
       )}
+
+      {/* 🧭 STYLISH BOTTOM NAVIGATION BAR (ALWAYS VISIBLE AT THE BOTTOM OVERALL) */}
+      <div 
+        id="always-visible-bottom-navigation-bar" 
+        className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-rose-100 shadow-md py-3 px-6 flex justify-around items-center"
+      >
+        <button
+          onClick={() => setActiveTab('home')}
+          className={`flex flex-col items-center gap-1 cursor-pointer transition duration-200 active:scale-90 ${
+            activeTab === 'home' ? 'text-rose-600 font-extrabold scale-102' : 'text-zinc-400 hover:text-zinc-650 font-semibold'
+          }`}
+        >
+          <HomeIcon className="h-5 w-5" />
+          <span className="text-[10px] tracking-tight">Accueil</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('categories')}
+          className={`flex flex-col items-center gap-1 cursor-pointer transition duration-200 active:scale-90 ${
+            activeTab === 'categories' ? 'text-rose-600 font-extrabold scale-102' : 'text-zinc-400 hover:text-zinc-650 font-semibold'
+          }`}
+        >
+          <Grid3X3 className="h-5 w-5" />
+          <span className="text-[10px] tracking-tight">Catégories</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('offers')}
+          className={`flex flex-col items-center gap-1 cursor-pointer transition duration-200 active:scale-90 ${
+            activeTab === 'offers' ? 'text-rose-600 font-extrabold scale-102' : 'text-zinc-400 hover:text-zinc-650 font-semibold'
+          }`}
+        >
+          <BadgePercent className="h-5 w-5" />
+          <span className="text-[10px] tracking-tight">Offres</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('cart')}
+          className={`flex flex-col items-center gap-1 cursor-pointer transition duration-200 active:scale-90 relative ${
+            activeTab === 'cart' ? 'text-rose-600 font-extrabold scale-102' : 'text-zinc-400 hover:text-zinc-650 font-semibold'
+          }`}
+        >
+          <BottomCartIcon className="h-5 w-5" />
+          <span className="text-[10px] tracking-tight">Panier</span>
+          {cartTotalCount > 0 && (
+            <span className="absolute -top-1 right-1 bg-rose-500 text-white font-extrabold text-[8px] h-4 w-4 rounded-full border border-white flex items-center justify-center animate-bounce">
+              {cartTotalCount}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('profile')}
+          className={`flex flex-col items-center gap-1 cursor-pointer transition duration-200 active:scale-90 ${
+            activeTab === 'profile' ? 'text-rose-600 font-extrabold scale-102' : 'text-zinc-400 hover:text-zinc-650 font-semibold'
+          }`}
+        >
+          <UserIcon className="h-5 w-5" />
+          <span className="text-[10px] tracking-tight">Profil</span>
+        </button>
+      </div>
 
     </div>
   );

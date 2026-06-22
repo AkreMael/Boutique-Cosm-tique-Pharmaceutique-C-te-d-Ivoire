@@ -177,7 +177,6 @@ export default function Catalog({
                       : 'bg-zinc-50 border border-zinc-150 text-zinc-700 hover:bg-rose-50/50'
                   }`}
                 >
-                  {cat.slug === 'promotions' && <span className="text-rose-500 font-bold">●</span>}
                   <span>{cat.name}</span>
                 </button>
               ))}

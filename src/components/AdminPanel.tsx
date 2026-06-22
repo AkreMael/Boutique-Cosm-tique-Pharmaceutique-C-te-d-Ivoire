@@ -180,7 +180,7 @@ export default function AdminPanel({
   const [prodPromo, setProdPromo] = useState<number | undefined>(undefined);
   const [prodStock, setProdStock] = useState(20);
   const [prodImg, setProdImg] = useState('https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=600&auto=format&fit=crop');
-  const [prodCat, setProdCat] = useState('soins-visage');
+  const [prodCat, setProdCat] = useState('soins-peau');
   const [prodBrand, setProdBrand] = useState('PharmaPure CI');
 
 
@@ -321,7 +321,7 @@ export default function AdminPanel({
     setProdPrice(5000);
     setProdPromo(undefined);
     setProdStock(20);
-    setProdCat('soins-visage');
+    setProdCat('soins-peau');
     setShowProductModal(false);
   };
 
@@ -863,7 +863,7 @@ export default function AdminPanel({
                           onChange={(e) => setProdCat(e.target.value)}
                           className="w-full p-3 bg-zinc-50 border border-zinc-200 rounded-xl"
                         >
-                          {categories.filter((c) => c.slug !== 'promotions').map((category) => (
+                          {categories.map((category) => (
                             <option key={category.slug} value={category.slug}>{category.name}</option>
                           ))}
                         </select>
