@@ -15,17 +15,16 @@ export interface Product {
   isActive?: boolean; // Support isActive explicitly
 }
 
-export type CategorySlug =
-  | 'soins-peau'
-  | 'cremes-soins'
-  | 'pommades-traitements'
-  | 'produits-capillaires';
+export type CategorySlug = string;
 
 export interface Category {
   slug: CategorySlug;
   name: string;
   description: string;
-  iconName: string;
+  iconName?: string;
+  icon?: string;
+  imageUrl?: string;
+  image?: string;
 }
 
 export type UserRole = 'client' | 'admin' | 'pharmacist' | 'agent';

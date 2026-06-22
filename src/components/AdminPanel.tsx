@@ -193,6 +193,7 @@ export default function AdminPanel({
   const [catNameInput, setCatNameInput] = useState('');
   const [catSlugInput, setCatSlugInput] = useState('');
   const [catDescInput, setCatDescInput] = useState('');
+  const [catImageUrlInput, setCatImageUrlInput] = useState('');
   const [catError, setCatError] = useState('');
   const [catSuccess, setCatSuccess] = useState('');
 
@@ -212,6 +213,7 @@ export default function AdminPanel({
           slug: catSlugInput.toLowerCase().trim().replace(/\s+/g, '-'),
           name: catNameInput.trim(),
           description: catDescInput.trim(),
+          imageUrl: catImageUrlInput.trim() || undefined,
           icon: 'Sparkles'
         })
       });
@@ -220,6 +222,7 @@ export default function AdminPanel({
         setCatNameInput('');
         setCatSlugInput('');
         setCatDescInput('');
+        setCatImageUrlInput('');
       } else {
         const data = await res.json();
         setCatError(data.error || 'Erreur lors de la création');
@@ -1002,7 +1005,7 @@ export default function AdminPanel({
                 </div>
               )}
 
-              <form onSubmit={handleAddCategory} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+              <form onSubmit={handleAddCategory} className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
                 <div>
                   <label className="block text-zinc-700 font-bold mb-1.5">Nom de la catégorie *</label>
                   <input
@@ -1025,7 +1028,7 @@ export default function AdminPanel({
                 </div>
 
                 <div>
-                  <label className="block text-zinc-700 font-bold mb-1.5">Slug (Identifiant d'URL unique) *</label>
+                  <label className="block text-zinc-700 font-bold mb-1.5">Slug de la catégorie (Identifiant URL unique) *</label>
                   <input
                     type="text"
                     required
@@ -1034,23 +1037,36 @@ export default function AdminPanel({
                     onChange={(e) => setCatSlugInput(e.target.value.toLowerCase().trim().replace(/[^a-z0-9-]/g, ''))}
                     className="w-full p-3 bg-zinc-50 border border-zinc-200 rounded-xl font-mono"
                   />
+                  <p className="text-[10px] text-zinc-400 mt-1">Sert d'identifiant technique dans le catalogue et dans l'URL de navigation.</p>
                 </div>
 
-                <div>
+                <div className="md:col-span-2">
                   <label className="block text-zinc-700 font-bold mb-1.5">Description optionnelle</label>
                   <input
                     type="text"
-                    placeholder="ex: Gamme d'huiles et shampoings"
+                    placeholder="ex: Gamme d'huiles et shampoings d'Afrique"
                     value={catDescInput}
                     onChange={(e) => setCatDescInput(e.target.value)}
                     className="w-full p-3 bg-zinc-50 border border-zinc-200 rounded-xl"
                   />
                 </div>
 
-                <div className="md:col-span-3 flex justify-end">
+                <div className="md:col-span-2">
+                  <label className="block text-zinc-700 font-bold mb-1.5">URL de l'image de la catégorie <span className="text-zinc-400 text-[10px] font-normal">(Optionnelle - ex: Unsplash)</span></label>
+                  <input
+                    type="text"
+                    placeholder="ex: https://images.unsplash.com/... (Laisser vide si aucune image)"
+                    value={catImageUrlInput}
+                    onChange={(e) => setCatImageUrlInput(e.target.value)}
+                    className="w-full p-3 bg-zinc-50 border border-zinc-200 rounded-xl"
+                  />
+                  <p className="text-[10px] text-zinc-400 mt-1">Si laissée vide, une illustration par défaut sera automatiquement attribuée.</p>
+                </div>
+
+                <div className="md:col-span-2 flex justify-end">
                   <button
                     type="submit"
-                    className="px-6 py-3 bg-rose-950 hover:bg-rose-900 text-white font-bold rounded-xl flex items-center space-x-2 shadow-sm"
+                    className="px-6 py-3 bg-rose-950 hover:bg-rose-900 text-white font-bold rounded-xl flex items-center space-x-2 shadow-sm cursor-pointer"
                   >
                     <Plus className="h-4 w-4" />
                     <span>Créer la catégorie</span>
@@ -1064,7 +1080,7 @@ export default function AdminPanel({
               <h3 className="font-extrabold text-rose-950 text-sm mb-4">Catégories Enregistrées dans la Boutique</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {categories.map((cat) => {
-                  const productCount = products.filter(p => p.category === cat.slug).length;
+                  const productCount = products.filter(p => p.category === cat.slug || p.categoryId === cat.slug).length;
                   return (
                     <div key={cat.slug} className="p-5 rounded-2xl bg-zinc-55 border border-zinc-150 relative transition hover:shadow-xs group flex flex-col justify-between">
                       <div>

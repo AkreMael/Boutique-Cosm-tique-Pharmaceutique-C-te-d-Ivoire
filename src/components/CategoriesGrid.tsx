@@ -117,7 +117,7 @@ export default function CategoriesGrid({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {categories.map((cat) => {
               const count = getProductCount(cat.slug);
-              const customCover = CATEGORY_VISUALS[cat.slug]?.image || "https://images.unsplash.com/photo-1608248597481-496100c8c836?q=80&w=400&auto=format&fit=crop";
+              const customCover = cat.imageUrl || cat.image || CATEGORY_VISUALS[cat.slug]?.image || "https://images.unsplash.com/photo-1608248597481-496100c8c836?q=80&w=400&auto=format&fit=crop";
               const emoji = CATEGORY_VISUALS[cat.slug]?.emoji || "🎀";
 
               return (
