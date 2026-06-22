@@ -47,15 +47,37 @@ const firebaseApp = initializeApp(firebaseConfig);
 const clientDb = getFirestore(firebaseApp);
 const clientAuth = getAuth(firebaseApp);
 
-signInAnonymously(clientAuth)
-  .then(() => console.log("Backend server client SDK signed in anonymously to default database."))
-  .catch(err => console.error("Backend Firebase Auth anonymous fail:", err));
+let authPromise: Promise<any> | null = null;
+
+async function ensureAuth() {
+  if (clientAuth.currentUser) {
+    return clientAuth.currentUser;
+  }
+  if (!authPromise) {
+    console.log("Ensuring Firestore auth is active on backend...");
+    authPromise = signInAnonymously(clientAuth)
+      .then((cred) => {
+        console.log("Backend Firestore authenticated with UID:", cred.user.uid);
+        return cred.user;
+      })
+      .catch((err) => {
+        authPromise = null;
+        console.error("Backend Firestore auth handshake fail:", err);
+        throw err;
+      });
+  }
+  return authPromise;
+}
+
+// Initial preemptive trigger so that startup seeding is quick
+ensureAuth().catch((err) => console.log("Preemptive auth trigger warning:", err.message));
 
 // High-fidelity compatibility wrapper for Admin SDK structure in server.ts
 class DocRefCompat {
   constructor(private collName: string, private docId: string) {}
 
   async get() {
+    await ensureAuth();
     const snap = await getDoc(doc(clientDb, this.collName, this.docId));
     return {
       exists: snap.exists(),
@@ -65,14 +87,17 @@ class DocRefCompat {
   }
 
   async set(data: any, options?: { merge?: boolean }) {
+    await ensureAuth();
     await setDoc(doc(clientDb, this.collName, this.docId), data, options);
   }
 
   async update(data: any) {
+    await ensureAuth();
     await updateDoc(doc(clientDb, this.collName, this.docId), data);
   }
 
   async delete() {
+    await ensureAuth();
     await deleteDoc(doc(clientDb, this.collName, this.docId));
   }
 }
@@ -93,6 +118,7 @@ class QueryCompat {
   }
 
   async get() {
+    await ensureAuth();
     const q = query(collection(clientDb, this.collName), ...this.constraints);
     const snap = await getDocs(q);
     return {
