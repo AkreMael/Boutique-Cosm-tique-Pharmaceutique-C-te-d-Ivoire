@@ -1,6 +1,59 @@
-import React, { useState, useEffect } from 'react';
-import { ShoppingCart, Plus, Minus, Trash2, CheckCircle2, ChevronRight, Truck, Mail, Phone, MapPin, User as UserIcon } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ShoppingCart, Plus, Minus, Trash2, CheckCircle2, ChevronRight, Truck, Mail, Phone, MapPin, User as UserIcon, Check, X, Smartphone } from 'lucide-react';
 import { CartItem, Product, Order, User as AppUser } from '../types';
+import { db, doc, setDoc } from '../lib/firebase';
+
+// Predefined Côte d'Ivoire cities and localities database with delivery fees
+const IVORY_COAST_CITIES = [
+  { name: "Abidjan", fee: 1500, details: "Livreur moto, expédié sous 24h" },
+  { name: "Abidjan - Cocody", fee: 1500, details: "Livreur moto, expédié sous 24h" },
+  { name: "Abidjan - Yopougon", fee: 1500, details: "Livreur moto, expédié sous 24h" },
+  { name: "Abidjan - Marcory", fee: 1500, details: "Livreur moto, expédié sous 24h" },
+  { name: "Abidjan - Koumassi", fee: 1500, details: "Livreur moto, expédié sous 24h" },
+  { name: "Abidjan - Port-Bouët", fee: 1500, details: "Livreur moto, expédié sous 24h" },
+  { name: "Abidjan - Abobo", fee: 1500, details: "Livreur moto, expédié sous 24h" },
+  { name: "Abidjan - Plateau", fee: 1500, details: "Livreur moto, expédié sous 24h" },
+  { name: "Abidjan - Treichville", fee: 1500, details: "Livreur moto, expédié sous 24h" },
+  { name: "Abidjan - Adjamé", fee: 1500, details: "Livreur moto, expédié sous 24h" },
+  { name: "Abidjan - Riviera", fee: 1500, details: "Livreur moto, expédié sous 24h" },
+  { name: "Abidjan - Angré", fee: 1500, details: "Livreur moto, expédié sous 24h" },
+  { name: "Abidjan - Deux Plateaux", fee: 1500, details: "Livreur moto, expédié sous 24h" },
+  { name: "Abidjan - Zone 4", fee: 1500, details: "Livreur moto, expédié sous 24h" },
+  { name: "Bingerville", fee: 1500, details: "Livreur moto, expédié sous 24h" },
+  { name: "Grand-Bassam", fee: 1500, details: "Livreur moto, expédié sous 24h" },
+  { name: "Anyama", fee: 1500, details: "Livreur moto, expédié sous 24h" },
+  { name: "Songon", fee: 1500, details: "Livreur moto, expédié sous 24h" },
+  { name: "Yamoussoukro", fee: 3000, details: "Dépôt gare ou colis, expédié sous 48h" },
+  { name: "Bouaké", fee: 3000, details: "Dépôt gare ou colis, expédié sous 48h" },
+  { name: "San Pedro", fee: 3000, details: "Dépôt gare ou colis, expédié sous 48h" },
+  { name: "Korhogo", fee: 3000, details: "Dépôt gare ou colis, expédié sous 48h" },
+  { name: "Daloa", fee: 3000, details: "Dépôt gare ou colis, expédié sous 48h" },
+  { name: "Man", fee: 3000, details: "Dépôt gare ou colis, expédié sous 48h" },
+  { name: "Gagnoa", fee: 3000, details: "Dépôt gare ou colis, expédié sous 48h" },
+  { name: "Assinie", fee: 3000, details: "Dépôt gare ou colis, expédié sous 48h" },
+  { name: "Soubré", fee: 3000, details: "Dépôt gare ou colis, expédié sous 48h" },
+  { name: "Odienné", fee: 3000, details: "Dépôt gare ou colis, expédié sous 48h" },
+  { name: "Séguela", fee: 3000, details: "Dépôt gare ou colis, expédié sous 48h" },
+  { name: "Boundiali", fee: 3000, details: "Dépôt gare ou colis, expédié sous 48h" },
+  { name: "Ferkessédougou", fee: 3000, details: "Dépôt gare ou colis, expédié sous 48h" },
+  { name: "Katiola", fee: 3000, details: "Dépôt gare ou colis, expédié sous 48h" },
+  { name: "Dabou", fee: 3000, details: "Dépôt gare ou colis, expédié sous 48h" },
+  { name: "Adzopé", fee: 3000, details: "Dépôt gare ou colis, expédié sous 48h" },
+  { name: "Agboville", fee: 3000, details: "Dépôt gare ou colis, expédié sous 48h" },
+  { name: "Aboisso", fee: 3000, details: "Dépôt gare ou colis, expédié sous 48h" },
+  { name: "Daoukro", fee: 3000, details: "Dépôt gare ou colis, expédié sous 48h" },
+  { name: "Bondoukou", fee: 3000, details: "Dépôt gare ou colis, expédié sous 48h" },
+  { name: "Bouna", fee: 3000, details: "Dépôt gare ou colis, expédié sous 48h" },
+  { name: "Guiglo", fee: 3000, details: "Dépôt gare ou colis, expédié sous 48h" },
+  { name: "Duékoué", fee: 3000, details: "Dépôt gare ou colis, expédié sous 48h" },
+  { name: "Touba", fee: 3000, details: "Dépôt gare ou colis, expédié sous 48h" },
+  { name: "Sinfra", fee: 3000, details: "Dépôt gare ou colis, expédié sous 48h" },
+  { name: "Oumé", fee: 3000, details: "Dépôt gare ou colis, expédié sous 48h" },
+  { name: "Divo", fee: 3000, details: "Dépôt gare ou colis, expédié sous 48h" },
+  { name: "Lakota", fee: 3000, details: "Dépôt gare ou colis, expédié sous 48h" },
+  { name: "Sassandra", fee: 3000, details: "Dépôt gare ou colis, expédié sous 48h" },
+  { name: "Tabou", fee: 3000, details: "Dépôt gare ou colis, expédié sous 48h" }
+];
 
 interface CartScreenProps {
   cart: CartItem[];
@@ -26,34 +79,62 @@ export default function CartScreen({
   // Checkout form details
   const [customerName, setCustomerName] = useState(currentUser?.name || '');
   const [phone, setPhone] = useState(currentUser?.phone || '');
-  const [city, setCity] = useState(currentUser?.city || 'Abidjan');
+  const [city, setCity] = useState(currentUser?.city || '');
+  const [cityInput, setCityInput] = useState(currentUser?.city || '');
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [address, setAddress] = useState(currentUser?.address || '');
   const [email, setEmail] = useState(currentUser?.email || '');
-  const [paymentMethod, setPaymentMethod] = useState<'Orange Money' | 'MTN Money' | 'Moov Money' | 'A la livraison'>('A la livraison');
+  const [paymentMethod, setPaymentMethod] = useState<string>('A la livraison');
+  const [showMobileMoneyOptions, setShowMobileMoneyOptions] = useState(false);
   
   const [loading, setLoading] = useState(false);
   const [checkoutStep, setCheckoutStep] = useState<'cart' | 'checkout' | 'success'>('cart');
   const [lastCreatedOrder, setLastCreatedOrder] = useState<Order | null>(null);
+
+  const autocompleteRef = useRef<HTMLDivElement>(null);
 
   // Sync details when user updates or logs in
   useEffect(() => {
     if (currentUser) {
       setCustomerName(currentUser.name || '');
       setPhone(currentUser.phone || '');
-      setCity(currentUser.city || 'Abidjan');
+      setCity(currentUser.city || '');
+      setCityInput(currentUser.city || '');
       setAddress(currentUser.address || '');
       setEmail(currentUser.email || '');
     }
   }, [currentUser]);
+
+  // Click outside to close autocomplete suggestions
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (autocompleteRef.current && !autocompleteRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const subtotal = cart.reduce((total, item) => {
     const price = item.product.promoPrice ? item.product.promoPrice : item.product.price;
     return total + price * item.quantity;
   }, 0);
 
-  // Côte d'Ivoire delivery fees: Abidjan = 1500 FCFA, Rest of the country = 3000 FCFA
-  const deliveryFee = city.toLowerCase() === 'abidjan' ? 1500 : 3000;
-  const totalCost = subtotal > 0 ? subtotal + deliveryFee : 0;
+  // Côte d'Ivoire delivery fees calculated using the selected city object or custom string fallback
+  const getDeliveryFeeForCity = (cityName: string) => {
+    if (!cityName) return 0;
+    const matched = IVORY_COAST_CITIES.find(c => c.name.toLowerCase() === cityName.toLowerCase());
+    if (matched) return matched.fee;
+    const lower = cityName.toLowerCase();
+    if (lower.includes('abidjan') || lower.includes('cocody') || lower.includes('yopougon') || lower.includes('marcory') || lower.includes('koumassi') || lower.includes('plateau') || lower.includes('abobo') || lower.includes('treichville') || lower.includes('adjamé') || lower.includes('bingerville') || lower.includes('bassam')) {
+      return 1500;
+    }
+    return 3000; // Default for other locations/interior
+  };
+
+  const deliveryFee = city ? getDeliveryFeeForCity(city) : 0;
+  const totalCost = subtotal > 0 ? (city ? subtotal + deliveryFee : subtotal) : 0;
 
   const handleCheckoutSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,9 +151,11 @@ export default function CartScreen({
 
     setLoading(true);
 
+    const orderId = `cmd-${Math.floor(10000 + Math.random() * 90000)}`;
     const orderPayload = {
+      id: orderId,
       userId: currentUser.id,
-      customerName,
+      customerName: customerName || currentUser.name,
       customerPhone: phone,
       customerEmail: email || `${currentUser.id}@omii.ci`,
       address,
@@ -85,53 +168,40 @@ export default function CartScreen({
         image: item.product.images[0]
       })),
       total: totalCost,
-      paymentMethod: paymentMethod === 'A la livraison' ? 'Orange Money' : paymentMethod, // Orange/MTN mapped under typical system schemas
-      paymentStatus: 'En attente'
+      status: 'En attente' as const,
+      paymentMethod,
+      paymentStatus: 'En attente' as const,
+      date: new Date().toISOString()
     };
 
+    // 1. Instant optimistic local write to Firestore (visible to snapshots instantly)
     try {
-      const response = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderPayload)
-      });
-      if (!response.ok) throw new Error('Order post failed');
-      const savedOrder = await response.json();
-      setLastCreatedOrder(savedOrder);
-      onOrderCreated(savedOrder);
-      onClearCart();
-      setCheckoutStep('success');
+      await setDoc(doc(db, "orders", orderId), orderPayload);
+      console.log("Order saved directly to Firestore client-side:", orderId);
     } catch (err) {
-      console.error("Order direct POST failure, building local fallback:", err);
-      // Construct robust local fallback receipt matching Order interface
-      const fallbackOrder: Order = {
-        id: `cmd-${Math.floor(1000 + Math.random() * 90002)}`,
-        userId: currentUser.id,
-        customerName: customerName || currentUser.name,
-        customerPhone: phone,
-        customerEmail: email || 'visiteur@omii.ci',
-        address,
-        city,
-        items: cart.map((item) => ({
-          productId: item.product.id,
-          name: item.product.name,
-          price: item.product.promoPrice ? item.product.promoPrice : item.product.price,
-          quantity: item.quantity,
-          image: item.product.images[0]
-        })),
-        total: totalCost,
-        status: 'En attente',
-        paymentMethod: 'Orange Money', // maps standard schema
-        paymentStatus: 'En attente',
-        date: new Date().toISOString()
-      };
-      setLastCreatedOrder(fallbackOrder);
-      onOrderCreated(fallbackOrder);
-      onClearCart();
-      setCheckoutStep('success');
-    } finally {
-      setLoading(false);
+      console.error("Direct order Firestore write failed:", err);
     }
+
+    // 2. Async Express sync in background to update stocks and server-side tracking
+    fetch('/api/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(orderPayload)
+    }).then(async (response) => {
+      if (response.ok) {
+        console.log("Express order sync succeeded");
+      } else {
+        console.warn("Express order sync warning status:", response.status);
+      }
+    }).catch(err => {
+      console.error("Express order sync failed in background:", err);
+    });
+
+    setLastCreatedOrder(orderPayload);
+    onOrderCreated(orderPayload);
+    onClearCart();
+    setCheckoutStep('success');
+    setLoading(false);
   };
 
   if (checkoutStep === 'success' && lastCreatedOrder) {
@@ -168,7 +238,7 @@ export default function CartScreen({
             <p className="flex justify-between border-t pt-2 text-rose-950">
               <span className="font-black text-zinc-950">Option de Paiement :</span>
               <span className="font-extrabold text-rose-600 bg-rose-50 px-2.5 py-0.5 rounded-lg uppercase text-[10px]">
-                En espèces à la livraison
+                {lastCreatedOrder.paymentMethod}
               </span>
             </p>
             <p className="flex justify-between text-sm pt-2 font-black border-t text-rose-950">
@@ -385,28 +455,64 @@ export default function CartScreen({
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* City */}
-                    <div className="space-y-1.5">
+                    {/* City (with suggestions) */}
+                    <div className="space-y-1.5 relative" ref={autocompleteRef}>
                       <label className="text-[10px] uppercase font-mono tracking-wider font-bold text-zinc-500 block">
-                        Ville d'expédition <span className="text-red-500">*</span>
+                        Ville ou localité d'expédition <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
                         <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
                           <MapPin className="h-4 w-4" />
                         </span>
-                        <select
-                          value={city}
-                          onChange={(e) => setCity(e.target.value)}
-                          className="w-full pl-9.5 pr-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-rose-300 focus:bg-white cursor-pointer"
-                        >
-                          <option value="Abidjan">Abidjan (Expédié sous 24h • 1500 FCFA)</option>
-                          <option value="Yamoussoukro">Yamoussoukro (Expédié sous 48h • 3000 FCFA)</option>
-                          <option value="Bouaké">Bouaké (Expédié sous 48h • 3000 FCFA)</option>
-                          <option value="San Pedro">San Pedro (Expédié sous 48h • 3000 FCFA)</option>
-                          <option value="Korhogo">Korhogo (Expédié sous 48h • 3000 FCFA)</option>
-                          <option value="Daloa">Daloa (Expédié sous 48h • 3000 FCFA)</option>
-                        </select>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Saisissez votre ville (ex: Cocody, Yamoussoukro...)"
+                          value={cityInput}
+                          onChange={(e) => {
+                            setCityInput(e.target.value);
+                            setCity(e.target.value); // Sync typed text
+                            setShowSuggestions(true);
+                          }}
+                          onFocus={() => setShowSuggestions(true)}
+                          className="w-full pl-9.5 pr-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-rose-300 focus:bg-white"
+                        />
                       </div>
+                      
+                      {/* Suggestions list */}
+                      {showSuggestions && (
+                        <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-zinc-200 rounded-xl shadow-xl max-h-52 overflow-y-auto z-50 divide-y divide-zinc-100">
+                          {IVORY_COAST_CITIES.filter(c => 
+                            c.name.toLowerCase().includes(cityInput.toLowerCase())
+                          ).map((suggestion) => (
+                            <button
+                              key={suggestion.name}
+                              type="button"
+                              onClick={() => {
+                                setCityInput(suggestion.name);
+                                setCity(suggestion.name);
+                                setShowSuggestions(false);
+                              }}
+                              className="w-full px-4 py-3 text-left text-xs font-semibold hover:bg-rose-50/50 flex justify-between items-center transition cursor-pointer"
+                            >
+                              <div className="flex flex-col">
+                                <span className="text-rose-950 font-bold">{suggestion.name}</span>
+                                <span className="text-[9px] text-zinc-400 font-normal mt-0.5">{suggestion.details}</span>
+                              </div>
+                              <span className="text-rose-600 font-extrabold font-mono shrink-0 bg-rose-50 px-2 py-1 rounded text-[10px]">
+                                + {suggestion.fee.toLocaleString()} F
+                              </span>
+                            </button>
+                          ))}
+                          {IVORY_COAST_CITIES.filter(c => 
+                            c.name.toLowerCase().includes(cityInput.toLowerCase())
+                          ).length === 0 && (
+                            <div className="p-4 text-center text-zinc-400 text-[10px] italic">
+                              Aucune suggestion trouvée. Saisie libre acceptée.
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Email optional */}
@@ -445,43 +551,121 @@ export default function CartScreen({
                   </div>
 
                   {/* PAYMENT CHOICE SELECTION */}
-                  <div className="space-y-2 border-t pt-4">
-                    <span className="text-[10px] uppercase font-mono tracking-wider font-bold text-zinc-400 block mb-2">
+                  <div className="space-y-3 border-t pt-4">
+                    <span className="text-[10px] uppercase font-mono tracking-wider font-bold text-zinc-400 block">
                       Manière de régler :
                     </span>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <button
                         type="button"
-                        onClick={() => setPaymentMethod('A la livraison')}
-                        className={`p-3 rounded-2xl border text-xs font-bold text-left transition flex justify-between items-center ${
+                        onClick={() => {
+                          setPaymentMethod('A la livraison');
+                          setShowMobileMoneyOptions(false);
+                        }}
+                        className={`p-3.5 rounded-2xl border text-xs font-bold text-left transition flex justify-between items-center cursor-pointer ${
                           paymentMethod === 'A la livraison'
-                            ? 'bg-rose-50 border-rose-500 text-rose-950 shadow-sm'
+                            ? 'bg-rose-50 border-rose-500 text-rose-950 shadow-sm ring-1 ring-rose-300'
                             : 'bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-50'
                         }`}
                       >
                         <div>
                           <p>🤝 Paiement à la livraison</p>
-                          <p className="text-[9px] text-zinc-400 font-normal mt-0.5">Espèces ou Mobile Money à la réception.</p>
+                          <p className="text-[9px] text-zinc-400 font-normal mt-0.5">Réglez sur place à la réception du colis.</p>
                         </div>
                         {paymentMethod === 'A la livraison' && <span className="text-xs">🟢</span>}
                       </button>
 
                       <button
                         type="button"
-                        onClick={() => setPaymentMethod('Orange Money')}
-                        className={`p-3 rounded-2xl border text-xs font-bold text-left transition flex justify-between items-center ${
-                          paymentMethod === 'Orange Money'
-                            ? 'bg-rose-50 border-rose-500 text-rose-950 shadow-sm'
+                        onClick={() => {
+                          setShowMobileMoneyOptions(true);
+                          if (paymentMethod === 'A la livraison') {
+                            setPaymentMethod('Wave'); // Default to Wave
+                          }
+                        }}
+                        className={`p-3.5 rounded-2xl border text-xs font-bold text-left transition flex justify-between items-center cursor-pointer ${
+                          paymentMethod !== 'A la livraison'
+                            ? 'bg-rose-50 border-rose-500 text-rose-950 shadow-sm ring-1 ring-rose-300'
                             : 'bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-50'
                         }`}
                       >
                         <div>
-                          <p>🟠 Mobile Money Express </p>
-                          <p className="text-[9px] text-zinc-400 font-normal mt-0.5">Paiement d'Abidjan (Orange, MTN, Moov).</p>
+                          <p>📱 Mobile Money</p>
+                          <p className="text-[9px] text-zinc-400 font-normal mt-0.5">
+                            {['Wave', 'Orange Money', 'MTN Money', 'Moov Money'].includes(paymentMethod)
+                              ? `Réseau choisi : ${paymentMethod}`
+                              : "Wave, Orange Money, MTN, Moov"}
+                          </p>
                         </div>
-                        {paymentMethod === 'Orange Money' && <span className="text-xs">🟢</span>}
+                        {paymentMethod !== 'A la livraison' && <span className="text-xs">🟢</span>}
                       </button>
                     </div>
+
+                    {/* Mobile Money Provider selection submenu */}
+                    {showMobileMoneyOptions && (
+                      <div className="p-4 bg-zinc-50 rounded-2xl border border-zinc-200 space-y-3 animate-fade-in">
+                        <p className="text-[10px] uppercase font-mono tracking-wider font-extrabold text-zinc-400">
+                          Sélectionnez votre réseau de paiement :
+                        </p>
+                        <div className="grid grid-cols-2 gap-3">
+                          {/* Wave */}
+                          <button
+                            type="button"
+                            onClick={() => setPaymentMethod('Wave')}
+                            className={`p-3 rounded-xl border text-xs font-extrabold transition flex items-center gap-2 cursor-pointer ${
+                              paymentMethod === 'Wave'
+                                ? 'bg-sky-50 border-sky-400 text-sky-950 shadow-sm ring-1 ring-sky-300'
+                                : 'bg-white border-zinc-250 text-zinc-700 hover:bg-zinc-50'
+                            }`}
+                          >
+                            <span className="text-lg">🌊</span>
+                            <span className="font-extrabold text-[10px]">Wave</span>
+                          </button>
+
+                          {/* Orange Money */}
+                          <button
+                            type="button"
+                            onClick={() => setPaymentMethod('Orange Money')}
+                            className={`p-3 rounded-xl border text-xs font-extrabold transition flex items-center gap-2 cursor-pointer ${
+                              paymentMethod === 'Orange Money'
+                                ? 'bg-orange-50 border-orange-400 text-orange-950 shadow-sm ring-1 ring-orange-300'
+                                : 'bg-white border-zinc-250 text-zinc-700 hover:bg-zinc-50'
+                            }`}
+                          >
+                            <span className="text-lg">🍊</span>
+                            <span className="font-extrabold text-[10px]">Orange Money</span>
+                          </button>
+
+                          {/* MTN Money */}
+                          <button
+                            type="button"
+                            onClick={() => setPaymentMethod('MTN Money')}
+                            className={`p-3 rounded-xl border text-xs font-extrabold transition flex items-center gap-2 cursor-pointer ${
+                              paymentMethod === 'MTN Money'
+                                ? 'bg-amber-50 border-amber-400 text-amber-950 shadow-sm ring-1 ring-amber-300'
+                                : 'bg-white border-zinc-250 text-zinc-700 hover:bg-zinc-50'
+                            }`}
+                          >
+                            <span className="text-lg">🟡</span>
+                            <span className="font-extrabold text-[10px]">MTN Money</span>
+                          </button>
+
+                          {/* Moov Money */}
+                          <button
+                            type="button"
+                            onClick={() => setPaymentMethod('Moov Money')}
+                            className={`p-3 rounded-xl border text-xs font-extrabold transition flex items-center gap-2 cursor-pointer ${
+                              paymentMethod === 'Moov Money'
+                                ? 'bg-emerald-50 border-emerald-400 text-emerald-950 shadow-sm ring-1 ring-emerald-300'
+                                : 'bg-white border-zinc-250 text-zinc-700 hover:bg-zinc-50'
+                            }`}
+                          >
+                            <span className="text-lg">🟢</span>
+                            <span className="font-extrabold text-[10px]">Moov Money</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Submission triggers */}
@@ -524,15 +708,19 @@ export default function CartScreen({
                   <div className="flex justify-between font-normal items-start">
                     <div>
                       <span>Frais d'expédition :</span>
-                      <span className="block text-[9px] text-zinc-400 mt-0.5">Côte d'Ivoire centrale</span>
+                      {city ? (
+                        <span className="block text-[9px] text-emerald-600 font-bold mt-0.5">✓ {city}</span>
+                      ) : (
+                        <span className="block text-[9px] text-rose-500 font-semibold mt-0.5">⚠️ Sélectionnez votre ville</span>
+                      )}
                     </div>
                     <span className="font-bold text-zinc-850">
-                      {subtotal > 0 ? `${deliveryFee.toLocaleString()} FCFA` : "0 FCFA"}
+                      {city ? `${deliveryFee.toLocaleString()} FCFA` : "—"}
                     </span>
                   </div>
 
                   <p className="text-[10px] text-zinc-400 font-medium leading-relaxed bg-white border p-3 rounded-xl">
-                    🏢 Abidjan: <b>1 500 FCFA</b> (Livreur moto, 24h)<br/>
+                    🏢 Abidjan / Communes: <b>1 500 FCFA</b> (Livreur moto, 24h)<br/>
                     🌍 Intérieur (Bouaké, Yamoussoukro etc.): <b>3 000 FCFA</b> (Dépôt gare ou colis, 48h)
                   </p>
 
@@ -540,6 +728,11 @@ export default function CartScreen({
                     <span>Total final à payer :</span>
                     <span className="text-base text-rose-600 font-black">{totalCost.toLocaleString()} FCFA</span>
                   </div>
+                  {!city && (
+                    <p className="text-[9px] text-center text-amber-600 font-medium bg-amber-50 rounded-lg p-2 leading-relaxed">
+                      💡 Veuillez choisir une ville pour inclure les frais d'expédition au total.
+                    </p>
+                  )}
                 </div>
 
                 {checkoutStep === 'cart' && (

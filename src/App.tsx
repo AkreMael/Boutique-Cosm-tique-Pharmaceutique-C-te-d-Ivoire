@@ -586,12 +586,78 @@ export default function App() {
   };
 
   const handleUpdateOrderStatus = async (orderId: string, status: Order['status']) => {
-    await fetch(`/api/orders/${orderId}/status`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status })
-    });
-  }  // Loading spinner view
+    // 1. Instantly write to Firestore client-side so it is visible in real-time
+    try {
+      await setDoc(doc(db, "orders", orderId), { status }, { merge: true });
+      console.log("Updated order status directly in Firestore:", orderId, status);
+    } catch (err) {
+      console.error("Direct status update failed:", err);
+    }
+
+    // 2. Fallback backend sync
+    try {
+      await fetch(`/api/orders/${orderId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+    } catch (err) {
+      console.error("Express order status sync failed:", err);
+    }
+
+    // 3. Automated Chat Notification if validated or cancelled
+    const orderObj = orders.find(o => o.id === orderId);
+    if (orderObj) {
+      const clientName = orderObj.customerName;
+      const chatId = orderObj.userId; // client's userId is the chatId
+      let autoMessageText = '';
+
+      if (status === 'Confirmée') {
+        autoMessageText = `félicitations 🎊 votre commande a été transmise ${clientName} nous sommes toujours disponibles pour nouvelle commande à bientôt 🥰`;
+      } else if (status === 'Annulée') {
+        const firstItemName = orderObj.items?.[0]?.name || "produit";
+        const itemsCount = orderObj.items?.length || 0;
+        const productsListText = itemsCount > 1 
+          ? `les produits "${orderObj.items.map(i => i.name).join(' & ')}"` 
+          : `le produit "${firstItemName}"`;
+        autoMessageText = `produit ${productsListText} annulé vous pouvez passer une nouvelle demande si vous le souhaitez nous sommes toujours là à votre disposition pour une nouvelle demande merci 🫡`;
+      }
+
+      if (autoMessageText) {
+        const msgId = `msg-${Date.now()}`;
+        const autoMsg: ChatMessage = {
+          id: msgId,
+          chatId,
+          sender: 'admin',
+          senderName: 'Omi\'i Institut - Service Conseil',
+          message: autoMessageText,
+          timestamp: new Date().toISOString()
+        };
+
+        // Write directly to Firestore messages collection so it is seen instantly
+        try {
+          await setDoc(doc(db, "messages", msgId), autoMsg);
+          console.log("Automated status message saved to Firestore:", msgId);
+        } catch (err) {
+          console.error("Direct status message write failed:", err);
+        }
+
+        // Sync with backend so the chat session gets updated (lastMessage, etc.)
+        fetch(`/api/chats/${chatId}/messages`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: msgId,
+            sender: 'admin',
+            senderName: 'Omi\'i Institut - Service Conseil',
+            message: autoMessageText
+          })
+        }).catch(err => {
+          console.error("Express automated message synchronization failed in background:", err);
+        });
+      }
+    }
+  };  // Loading spinner view
   if (loading) {
     return (
       <div className="min-h-screen bg-rose-50/20 flex flex-col items-center justify-center font-sans">

@@ -1196,7 +1196,7 @@ app.get("/api/orders/user/:userId", async (req, res) => {
 });
 
 app.post("/api/orders", async (req, res) => {
-  const { userId, customerName, customerPhone, customerEmail, address, city, items, total, paymentMethod } = req.body;
+  const { id, userId, customerName, customerPhone, customerEmail, address, city, items, total, paymentMethod } = req.body;
   try {
     // Deduct stock in Firestore
     for (const item of items) {
@@ -1213,9 +1213,9 @@ app.post("/api/orders", async (req, res) => {
       }
     }
 
-    const id = `cmd-${Math.floor(1000 + Math.random() * 9000)}`;
+    const finalId = id || `cmd-${Math.floor(1000 + Math.random() * 9000)}`;
     const newOrder = {
-      id,
+      id: finalId,
       userId,
       customerName,
       customerPhone,
@@ -1224,13 +1224,13 @@ app.post("/api/orders", async (req, res) => {
       city: city || "Abidjan",
       items,
       total,
-      status: "En attente",
+      status: req.body.status || "En attente",
       paymentMethod,
-      paymentStatus: "Payé",
-      date: new Date().toISOString()
+      paymentStatus: req.body.paymentStatus || "En attente",
+      date: req.body.date || new Date().toISOString()
     };
 
-    await adminDb.collection("orders").doc(id).set(newOrder);
+    await adminDb.collection("orders").doc(finalId).set(newOrder);
     res.status(201).json(newOrder);
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });

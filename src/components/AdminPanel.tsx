@@ -716,7 +716,8 @@ export default function AdminPanel({
                           <p className="text-[10px] text-zinc-400 mt-0.5">{ord.customerPhone}</p>
                         </td>
                         <td className="py-4.5 px-6 text-zinc-500">
-                          {new Date(ord.date).toLocaleDateString()}
+                          <p className="font-bold">{new Date(ord.date).toLocaleDateString()}</p>
+                          <p className="text-[10px] text-zinc-400 font-mono mt-0.5">{new Date(ord.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
                         </td>
                         <td className="py-4.5 px-6 font-medium">
                           {ord.city}
@@ -726,11 +727,11 @@ export default function AdminPanel({
                         </td>
                         <td className="py-4.5 px-6 text-center">
                           <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase inline-block ${
-                            ord.status === 'Livrée' ? 'bg-emerald-100 text-emerald-800' :
-                            ord.status === 'En livraison' ? 'bg-indigo-100 text-indigo-800' :
-                            ord.status === 'Préparation' ? 'bg-amber-100 text-amber-800' :
-                            ord.status === 'Annulée' ? 'bg-red-100 text-red-800' :
-                            'bg-zinc-100 text-zinc-800'
+                            ord.status === 'Livrée' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
+                            ord.status === 'En livraison' ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' :
+                            ord.status === 'Préparation' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
+                            ord.status === 'Annulée' ? 'bg-red-100 text-red-800 border border-red-200' :
+                            'bg-zinc-100 text-zinc-800 border border-zinc-200'
                           }`}>
                             {ord.status}
                           </span>
@@ -738,51 +739,57 @@ export default function AdminPanel({
                         
                         {/* Interactive Stage triggers */}
                         <td className="py-4.5 px-6 text-center" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center justify-center space-x-2">
-                            {ord.status === 'En attente' && (
-                              <button
-                                onClick={() => onUpdateOrderStatus(ord.id, 'Confirmée')}
-                                className="px-2 py-1 bg-green-105 text-emerald-800 rounded font-bold text-[9px] uppercase border hover:bg-emerald-200"
-                              >
-                                Confirmer
-                              </button>
+                          <div className="flex items-center justify-center gap-2">
+                            {ord.status !== 'Confirmée' && ord.status !== 'Annulée' && ord.status !== 'Livrée' && (
+                              <>
+                                <button
+                                  onClick={() => onUpdateOrderStatus(ord.id, 'Confirmée')}
+                                  className="px-2.5 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-black text-[10px] uppercase transition flex items-center gap-1 cursor-pointer shadow-xs"
+                                  title="Valider la Commande"
+                                >
+                                  <Check className="h-3 w-3" />
+                                  <span>Valider</span>
+                                </button>
+                                <button
+                                  onClick={() => onUpdateOrderStatus(ord.id, 'Annulée')}
+                                  className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg font-black text-[10px] uppercase transition flex items-center gap-1 cursor-pointer border border-rose-200"
+                                  title="Annuler la Commande"
+                                >
+                                  <X className="h-3 w-3" />
+                                  <span>Annuler</span>
+                                </button>
+                              </>
                             )}
                             {ord.status === 'Confirmée' && (
-                              <button
-                                onClick={() => onUpdateOrderStatus(ord.id, 'Préparation')}
-                                className="px-2 py-1 bg-amber-100 text-amber-800 rounded font-bold text-[9px] uppercase hover:bg-amber-150"
-                              >
-                                Préparer
-                              </button>
-                            )}
-                            {ord.status === 'Préparation' && (
-                              <button
-                                onClick={() => onUpdateOrderStatus(ord.id, 'En livraison')}
-                                className="px-2 py-1 bg-indigo-600 text-white rounded font-bold text-[9px] uppercase flex items-center space-x-1 hover:bg-indigo-700"
-                              >
-                                <Truck className="h-3 w-3 inline" />
-                                <span>Expédier</span>
-                              </button>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-emerald-600 font-extrabold font-mono bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200 flex items-center gap-1 select-none">
+                                  <CheckCheck className="h-3 w-3" /> Validée
+                                </span>
+                                <button
+                                  onClick={() => onUpdateOrderStatus(ord.id, 'En livraison')}
+                                  className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md font-bold text-[9px] uppercase transition cursor-pointer"
+                                >
+                                  Mettre en Livraison
+                                </button>
+                              </div>
                             )}
                             {ord.status === 'En livraison' && (
                               <button
                                 onClick={() => onUpdateOrderStatus(ord.id, 'Livrée')}
-                                className="px-2 py-1 bg-emerald-600 text-white rounded font-bold text-[9px] uppercase hover:bg-emerald-700"
+                                className="px-2.5 py-1 bg-emerald-650 hover:bg-emerald-700 text-white rounded-md font-bold text-[9px] uppercase transition cursor-pointer"
                               >
-                                Terminer
+                                Marquer Livrée
                               </button>
                             )}
-                            {ord.status !== 'Livrée' && ord.status !== 'Annulée' && (
-                              <button
-                                onClick={() => onUpdateOrderStatus(ord.id, 'Annulée')}
-                                className="px-2 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded font-bold text-[9px] uppercase"
-                                title="Annuler"
-                              >
-                                Annuler
-                              </button>
+                            {ord.status === 'Annulée' && (
+                              <span className="text-[10px] text-red-600 font-extrabold font-mono bg-red-50 px-2.5 py-1 rounded-md border border-red-200 select-none">
+                                ✗ Annulée
+                              </span>
                             )}
-                            {(ord.status === 'Livrée' || ord.status === 'Annulée') && (
-                              <span className="text-[10px] text-zinc-400 font-mono">— Clôturée</span>
+                            {ord.status === 'Livrée' && (
+                              <span className="text-[10px] text-zinc-500 font-extrabold font-mono bg-zinc-100 px-2.5 py-1 rounded-md select-none">
+                                ✓ Livrée & Clôturée
+                              </span>
                             )}
                           </div>
                         </td>
@@ -793,43 +800,87 @@ export default function AdminPanel({
                         <tr className="bg-rose-50/5">
                           <td colSpan={7} className="py-4 px-6 border-b border-rose-100/50">
                             <div className="text-left space-y-4">
-                              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start bg-white p-3.5 rounded-2xl border border-rose-100/30 gap-3">
+                              <div className="grid grid-cols-1 md:grid-cols-3 bg-white p-4 rounded-2xl border border-rose-100/30 gap-4">
                                 <div>
-                                  <span className="text-[10px] uppercase font-mono tracking-wider font-extrabold text-rose-950 block">Adresse de Livraison :</span>
-                                  <p className="text-zinc-600 font-medium text-xs mt-1">
-                                    {ord.city} — {ord.address || "Aucune rue fournie"}
+                                  <span className="text-[10px] uppercase font-mono tracking-wider font-extrabold text-rose-950 block">Destinataire & Contact :</span>
+                                  <p className="text-zinc-800 font-bold text-xs mt-1.5 flex items-center gap-1.5">
+                                    <span>👤</span>
+                                    <span>{ord.customerName}</span>
+                                  </p>
+                                  <p className="text-zinc-500 font-mono text-xs mt-1 flex items-center gap-1.5">
+                                    <span>📞</span>
+                                    <span className="font-bold">{ord.customerPhone}</span>
                                   </p>
                                 </div>
-                                <div className="text-left sm:text-right">
-                                  <span className="text-[10px] uppercase font-mono tracking-wider font-extrabold text-rose-950 block">Email & Méthode :</span>
-                                  <p className="text-zinc-600 font-medium text-xs mt-1">
-                                    {ord.customerEmail || "Non renseigné"} • {ord.paymentMethod}
+                                <div>
+                                  <span className="text-[10px] uppercase font-mono tracking-wider font-extrabold text-rose-950 block">Adresse de Livraison :</span>
+                                  <p className="text-zinc-600 font-bold text-xs mt-1.5 flex items-center gap-1.5">
+                                    <span>📍</span>
+                                    <span>{ord.city}</span>
+                                  </p>
+                                  <p className="text-zinc-500 font-medium text-xs mt-1">
+                                    {ord.address || "Aucune rue fournie"}
+                                  </p>
+                                </div>
+                                <div>
+                                  <span className="text-[10px] uppercase font-mono tracking-wider font-extrabold text-rose-950 block">Paiement & Date :</span>
+                                  <p className="text-zinc-600 font-medium text-xs mt-1.5 flex items-center gap-1.5">
+                                    <span>💳</span>
+                                    <span className="font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded text-[10px]">{ord.paymentMethod}</span>
+                                  </p>
+                                  <p className="text-zinc-400 font-mono text-[10px] mt-1 flex items-center gap-1.5">
+                                    <span>🕒</span>
+                                    <span>{new Date(ord.date).toLocaleDateString()} à {new Date(ord.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                                   </p>
                                 </div>
                               </div>
 
-                              <div>
-                                <span className="text-[10px] uppercase font-mono tracking-wider font-bold text-rose-950 block mb-2.5">Détail des Articles Commandés ({ord.items ? ord.items.length : 0}) :</span>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                                  {ord.items && ord.items.map((item: any, idx: number) => (
-                                    <div key={idx} className="flex items-center p-3 rounded-2xl bg-white border border-rose-100/30">
-                                      <img
-                                        referrerPolicy="no-referrer"
-                                        src={item.image || "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=200&auto=format&fit=crop"}
-                                        alt={item.name}
-                                        className="h-12 w-12 object-cover rounded-xl mr-3 border shrink-0"
-                                      />
-                                      <div className="flex-1 min-w-0 pr-2">
-                                        <p className="font-bold text-rose-950 text-xs truncate">{item.name}</p>
-                                        <p className="text-[10px] text-zinc-400 mt-1">
-                                          {item.price.toLocaleString()} CFA × <span className="text-rose-900 font-black">{item.quantity}</span>
-                                        </p>
+                              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                                <div className="lg:col-span-2">
+                                  <span className="text-[10px] uppercase font-mono tracking-wider font-bold text-rose-950 block mb-2.5">Détail des Articles Commandés ({ord.items ? ord.items.length : 0}) :</span>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    {ord.items && ord.items.map((item: any, idx: number) => (
+                                      <div key={idx} className="flex items-center p-3 rounded-xl bg-white border border-rose-100/30">
+                                        <img
+                                          referrerPolicy="no-referrer"
+                                          src={item.image || "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=200&auto=format&fit=crop"}
+                                          alt={item.name}
+                                          className="h-12 w-12 object-cover rounded-xl mr-3 border shrink-0"
+                                        />
+                                        <div className="flex-1 min-w-0 pr-2">
+                                          <p className="font-bold text-rose-950 text-xs truncate">{item.name}</p>
+                                          <p className="text-[10px] text-zinc-400 mt-1">
+                                            {item.price.toLocaleString()} CFA × <span className="text-rose-900 font-black">{item.quantity}</span>
+                                          </p>
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                          <p className="font-black text-rose-950 text-xs text-nowrap">{(item.price * item.quantity).toLocaleString()} CFA</p>
+                                        </div>
                                       </div>
-                                      <div className="text-right shrink-0">
-                                        <p className="font-black text-rose-950 text-xs text-nowrap">{(item.price * item.quantity).toLocaleString()} CFA</p>
-                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                <div className="bg-zinc-50/80 p-4 rounded-2xl border border-zinc-200/50 space-y-3">
+                                  <span className="text-[10px] uppercase font-mono tracking-wider font-extrabold text-rose-950 block border-b pb-2">Decompte Financier de la commande :</span>
+                                  <div className="text-xs space-y-2 text-zinc-600">
+                                    <div className="flex justify-between">
+                                      <span>Sous-total Articles :</span>
+                                      <span className="font-bold text-zinc-800">
+                                        {(ord.items ? ord.items.reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0) : 0).toLocaleString()} FCFA
+                                      </span>
                                     </div>
-                                  ))}
+                                    <div className="flex justify-between">
+                                      <span>Frais de livraison :</span>
+                                      <span className="font-bold text-zinc-800">
+                                        {((ord.city === 'Abidjan' || ord.city?.toLowerCase().includes('abidjan') || ord.city?.toLowerCase().includes('cocody') || ord.city?.toLowerCase().includes('plateau') || ord.city?.toLowerCase().includes('yopougon') || ord.city?.toLowerCase().includes('marory') || ord.city?.toLowerCase().includes('koumassi') || ord.city?.toLowerCase().includes('angre') || ord.city?.toLowerCase().includes('deux plateaux')) ? 1500 : 3000).toLocaleString()} FCFA
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between border-t pt-2.5 font-black text-rose-950 text-sm">
+                                      <span>Total de la commande :</span>
+                                      <span className="text-rose-600">{ord.total.toLocaleString()} FCFA</span>
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
                             </div>
