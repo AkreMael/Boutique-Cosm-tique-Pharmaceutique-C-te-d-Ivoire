@@ -9,7 +9,7 @@ import {
 } from 'recharts';
 import { Product, Order, ChatSession, User as AppUser, AdminStats, Category, ChatMessage, Module, Item, UserModuleAccess, ActivityLog } from '../types';
 import PharmacistChat from './PharmacistChat';
-import { collection, onSnapshot, doc, updateDoc, deleteDoc, addDoc, getDocs, db, query, where, handleFirestoreError, OperationType } from '../lib/firebase';
+import { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, addDoc, getDocs, db, query, where, handleFirestoreError, OperationType } from '../lib/firebase';
 
 interface AdminPanelProps {
   products: Product[];
@@ -254,34 +254,42 @@ export default function AdminPanel({
     if (!editCategory) return;
     setCatError('');
     setCatSuccess('');
+    if (!editCatName.trim()) {
+      setCatError('Le nom de la catégorie est requis.');
+      return;
+    }
+    if (!editCatDesc.trim()) {
+      setCatError('La description de la catégorie est requise.');
+      return;
+    }
+    if (!editCatImageUrl.trim()) {
+      setCatError("L'image de la catégorie est requise.");
+      return;
+    }
+
+    const updatedCategoryData = {
+      slug: editCategory.slug,
+      name: editCatName.trim(),
+      description: editCatDesc.trim(),
+      imageUrl: editCatImageUrl.trim(),
+      image: editCatImageUrl.trim(),
+      icon: editCategory.icon || 'Sparkles'
+    };
+
     try {
-      const res = await fetch(`/api/categories/${editCategory.slug}`, {
+      // 1. Direct write to Firestore for instant real-time synchronization across clients
+      await setDoc(doc(db, "categories", editCategory.slug), updatedCategoryData);
+
+      // 2. Parallel API call to update backend database
+      await fetch(`/api/categories/${editCategory.slug}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: editCatName.trim(),
-          description: editCatDesc.trim(),
-          imageUrl: editCatImageUrl.trim(),
-          image: editCatImageUrl.trim()
-        })
+        body: JSON.stringify(updatedCategoryData)
       });
-      if (res.ok) {
-        setCatSuccess('Catégorie mise à jour avec succès !');
-        setShowCategoryEditModal(false);
-        setEditCategory(null);
-      } else {
-        let errorMessage = 'Erreur lors de la mise à jour';
-        try {
-          const data = await res.json();
-          errorMessage = data.error || errorMessage;
-        } catch {
-          try {
-            const txt = await res.text();
-            errorMessage = txt || errorMessage;
-          } catch {}
-        }
-        setCatError(errorMessage);
-      }
+
+      setCatSuccess('Catégorie mise à jour avec succès !');
+      setShowCategoryEditModal(false);
+      setEditCategory(null);
     } catch (err: any) {
       console.error("Erreur de mise à jour de catégorie:", err);
       setCatError(`Une erreur est survenue lors de la mise à jour: ${err.message || err}`);
@@ -292,41 +300,55 @@ export default function AdminPanel({
     e.preventDefault();
     setCatError('');
     setCatSuccess('');
-    if (!catNameInput || !catSlugInput) {
-      setCatError('Le nom et le slug de la catégorie sont requis.');
+    if (!catNameInput.trim()) {
+      setCatError('Le nom de la catégorie est requis.');
       return;
     }
+    if (!catDescInput.trim()) {
+      setCatError('La description de la catégorie est requise.');
+      return;
+    }
+    if (!catImageUrlInput.trim()) {
+      setCatError("L'image de la catégorie est requise (veuillez importer une image ou coller un lien URL).");
+      return;
+    }
+
+    // Automatically generate technical slug from category name
+    const generatedSlug = catNameInput.toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove accents
+      .replace(/[^a-z0-9 ]/g, '') // remove special chars
+      .trim().replace(/\s+/g, '-');
+
+    if (!generatedSlug) {
+      setCatError('Veuillez saisir un nom de catégorie valide.');
+      return;
+    }
+
+    const newCategoryData = {
+      slug: generatedSlug,
+      name: catNameInput.trim(),
+      description: catDescInput.trim(),
+      imageUrl: catImageUrlInput.trim(),
+      image: catImageUrlInput.trim(),
+      icon: 'Sparkles'
+    };
+
     try {
-      const res = await fetch('/api/categories', {
+      // 1. Direct write to Firestore for instant real-time synchronization
+      await setDoc(doc(db, "categories", generatedSlug), newCategoryData);
+
+      // 2. Parallel API call to update backend database
+      await fetch('/api/categories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          slug: catSlugInput.toLowerCase().trim().replace(/\s+/g, '-'),
-          name: catNameInput.trim(),
-          description: catDescInput.trim(),
-          imageUrl: catImageUrlInput.trim() || undefined,
-          icon: 'Sparkles'
-        })
+        body: JSON.stringify(newCategoryData)
       });
-      if (res.ok) {
-        setCatSuccess('Catégorie ajoutée avec succès !');
-        setCatNameInput('');
-        setCatSlugInput('');
-        setCatDescInput('');
-        setCatImageUrlInput('');
-      } else {
-        let errorMessage = 'Erreur lors de la création';
-        try {
-          const data = await res.json();
-          errorMessage = data.error || errorMessage;
-        } catch {
-          try {
-            const txt = await res.text();
-            errorMessage = txt || errorMessage;
-          } catch {}
-        }
-        setCatError(errorMessage);
-      }
+
+      setCatSuccess('Catégorie ajoutée avec succès !');
+      setCatNameInput('');
+      setCatSlugInput('');
+      setCatDescInput('');
+      setCatImageUrlInput('');
     } catch (err: any) {
       console.error("Erreur d'ajout de catégorie:", err);
       setCatError(`Une erreur est survenue lors de l'ajout: ${err.message || err}`);
@@ -338,24 +360,15 @@ export default function AdminPanel({
     setCatError('');
     setCatSuccess('');
     try {
-      const res = await fetch(`/api/categories/${slug}`, {
+      // 1. Direct delete from Firestore for instant real-time sync
+      await deleteDoc(doc(db, "categories", slug));
+
+      // 2. Parallel API call to delete from backend database
+      await fetch(`/api/categories/${slug}`, {
         method: 'DELETE'
       });
-      if (res.ok) {
-        setCatSuccess('Catégorie supprimée avec succès !');
-      } else {
-        let errorMessage = 'Erreur lors de la suppression';
-        try {
-          const data = await res.json();
-          errorMessage = data.error || errorMessage;
-        } catch {
-          try {
-            const txt = await res.text();
-            errorMessage = txt || errorMessage;
-          } catch {}
-        }
-        setCatError(errorMessage);
-      }
+
+      setCatSuccess('Catégorie supprimée avec succès !');
     } catch (err: any) {
       console.error("Erreur de suppression de catégorie:", err);
       setCatError(`Une erreur est survenue lors de la suppression: ${err.message || err}`);
@@ -1255,65 +1268,104 @@ export default function AdminPanel({
                 </div>
               )}
 
-              <form onSubmit={handleAddCategory} className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-                <div>
+              <form onSubmit={handleAddCategory} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
                   <label className="block text-zinc-700 font-bold mb-1.5">Nom de la catégorie *</label>
                   <input
                     type="text"
                     required
                     placeholder="ex: Soins Capillaires"
                     value={catNameInput}
-                    onChange={(e) => {
-                      setCatNameInput(e.target.value);
-                      // Automatic slug suggestion
-                      if (!catSlugInput) {
-                        setCatSlugInput(e.target.value.toLowerCase()
-                          .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove accents
-                          .replace(/[^a-z0-9 ]/g, '') // remove special chars
-                          .trim().replace(/\s+/g, '-'));
-                      }
-                    }}
+                    onChange={(e) => setCatNameInput(e.target.value)}
                     className="w-full p-3 bg-zinc-50 border border-zinc-200 rounded-xl"
                   />
                 </div>
 
-                <div>
-                  <label className="block text-zinc-700 font-bold mb-1.5">Slug de la catégorie (Identifiant URL unique) *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="ex: soins-capillaires"
-                    value={catSlugInput}
-                    onChange={(e) => setCatSlugInput(e.target.value.toLowerCase().trim().replace(/[^a-z0-9-]/g, ''))}
-                    className="w-full p-3 bg-zinc-50 border border-zinc-200 rounded-xl font-mono"
-                  />
-                  <p className="text-[10px] text-zinc-400 mt-1">Sert d'identifiant technique dans le catalogue et dans l'URL de navigation.</p>
-                </div>
-
                 <div className="md:col-span-2">
-                  <label className="block text-zinc-700 font-bold mb-1.5">Description optionnelle</label>
-                  <input
-                    type="text"
-                    placeholder="ex: Gamme d'huiles et shampoings d'Afrique"
+                  <label className="block text-zinc-700 font-bold mb-1.5">Description de la catégorie *</label>
+                  <textarea
+                    required
+                    rows={3}
+                    placeholder="ex: Gamme complète d'huiles, sérums et shampoings d'Afrique pour sublimer votre chevelure."
                     value={catDescInput}
                     onChange={(e) => setCatDescInput(e.target.value)}
                     className="w-full p-3 bg-zinc-50 border border-zinc-200 rounded-xl"
                   />
                 </div>
 
-                <div className="md:col-span-2">
-                  <label className="block text-zinc-700 font-bold mb-1.5">URL de l'image de la catégorie <span className="text-zinc-400 text-[10px] font-normal">(Optionnelle - ex: Unsplash)</span></label>
-                  <input
-                    type="text"
-                    placeholder="ex: https://images.unsplash.com/... (Laisser vide si aucune image)"
-                    value={catImageUrlInput}
-                    onChange={(e) => setCatImageUrlInput(e.target.value)}
-                    className="w-full p-3 bg-zinc-50 border border-zinc-200 rounded-xl"
-                  />
-                  <p className="text-[10px] text-zinc-400 mt-1">Si laissée vide, une illustration par défaut sera automatiquement attribuée.</p>
+                <div className="md:col-span-2 border-t border-rose-50 pt-4">
+                  <label className="block text-rose-950 font-extrabold mb-2 text-sm">Image de la catégorie *</label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Option 1: File Importer */}
+                    <div className="p-4 bg-rose-50/10 border border-dashed border-rose-200 rounded-2xl flex flex-col items-center justify-center text-center space-y-2 min-h-[140px] relative hover:bg-rose-50/20 transition group">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        id="category-file-upload"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              if (typeof reader.result === 'string') {
+                                setCatImageUrlInput(reader.result);
+                              }
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                      <label htmlFor="category-file-upload" className="cursor-pointer flex flex-col items-center justify-center w-full h-full space-y-2">
+                        <FolderOpen className="h-8 w-8 text-rose-400 group-hover:scale-110 transition duration-200" />
+                        <span className="font-bold text-rose-950 text-xs">Importer un fichier image</span>
+                        <span className="text-[10px] text-zinc-400 font-normal">Formats acceptés: PNG, JPG, WEBP</span>
+                      </label>
+                    </div>
+
+                    {/* Option 2: Image URL input */}
+                    <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-2xl flex flex-col justify-center space-y-2 min-h-[140px]">
+                      <span className="font-bold text-zinc-700 block text-xs">Ou renseigner un lien URL</span>
+                      <input
+                        type="text"
+                        placeholder="ex: https://images.unsplash.com/photo-..."
+                        value={catImageUrlInput.startsWith('data:') ? '' : catImageUrlInput}
+                        onChange={(e) => setCatImageUrlInput(e.target.value)}
+                        className="w-full p-3 bg-white border border-zinc-200 rounded-xl text-xs font-mono"
+                      />
+                      <p className="text-[10px] text-zinc-400 leading-tight">Collez le lien complet vers une image publique hébergée en ligne.</p>
+                    </div>
+                  </div>
+
+                  {/* Active Preview */}
+                  {catImageUrlInput && (
+                    <div className="mt-4 p-3 bg-zinc-50 border border-zinc-200 rounded-2xl flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <img 
+                          src={catImageUrlInput} 
+                          alt="Aperçu" 
+                          className="h-14 w-14 object-cover rounded-xl border border-rose-100"
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="max-w-[280px]">
+                          <span className="font-bold text-rose-950 text-xs block">Aperçu de l'image sélectionnée</span>
+                          <span className="text-[10px] text-zinc-400 font-mono block truncate mt-0.5">
+                            {catImageUrlInput.startsWith('data:') ? 'Image importée (Base64)' : catImageUrlInput}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setCatImageUrlInput('')}
+                        className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 font-extrabold text-[10px] rounded-lg transition"
+                      >
+                        Retirer
+                      </button>
+                    </div>
+                  )}
                 </div>
 
-                <div className="md:col-span-2 flex justify-end">
+                <div className="md:col-span-2 flex justify-end pt-2">
                   <button
                     type="submit"
                     className="px-6 py-3 bg-rose-950 hover:bg-rose-900 text-white font-bold rounded-xl flex items-center space-x-2 shadow-sm cursor-pointer"
@@ -1402,16 +1454,6 @@ export default function AdminPanel({
 
                     <form onSubmit={handleUpdateCategorySubmit} className="space-y-4 text-xs font-sans">
                       <div>
-                        <label className="block text-zinc-700 font-bold mb-1">Identifiant technique (Slug - Non modifiable)</label>
-                        <input
-                          type="text"
-                          disabled
-                          value={editCategory.slug}
-                          className="w-full p-3 bg-zinc-100 border border-zinc-200 rounded-xl text-zinc-500 font-mono cursor-not-allowed"
-                        />
-                      </div>
-
-                      <div>
                         <label className="block text-zinc-700 font-bold mb-1">Nom de la catégorie *</label>
                         <input
                           type="text"
@@ -1424,8 +1466,9 @@ export default function AdminPanel({
                       </div>
 
                       <div>
-                        <label className="block text-zinc-700 font-bold mb-1">Description</label>
+                        <label className="block text-zinc-700 font-bold mb-1">Description de la catégorie *</label>
                         <textarea
+                          required
                           rows={3}
                           value={editCatDesc}
                           onChange={(e) => setEditCatDesc(e.target.value)}
@@ -1435,14 +1478,74 @@ export default function AdminPanel({
                       </div>
 
                       <div>
-                        <label className="block text-zinc-700 font-bold mb-1">URL de l'image de la catégorie</label>
-                        <input
-                          type="text"
-                          value={editCatImageUrl}
-                          onChange={(e) => setEditCatImageUrl(e.target.value)}
-                          placeholder="https://images.unsplash.com/..."
-                          className="w-full p-3 bg-zinc-50 border border-zinc-200 rounded-xl"
-                        />
+                        <label className="block text-rose-950 font-extrabold mb-2 text-xs">Image de la catégorie *</label>
+                        <div className="grid grid-cols-1 gap-3">
+                          {/* File input and URL Input options */}
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="p-3 bg-rose-50/10 border border-dashed border-rose-200 rounded-xl flex flex-col items-center justify-center text-center cursor-pointer relative hover:bg-rose-50/20 transition group">
+                              <input
+                                type="file"
+                                accept="image/*"
+                                id="edit-category-file-upload"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    const reader = new FileReader();
+                                    reader.onloadend = () => {
+                                      if (typeof reader.result === 'string') {
+                                        setEditCatImageUrl(reader.result);
+                                      }
+                                    };
+                                    reader.readAsDataURL(file);
+                                  }
+                                }}
+                              />
+                              <label htmlFor="edit-category-file-upload" className="cursor-pointer flex flex-col items-center justify-center w-full h-full py-2">
+                                <FolderOpen className="h-5 w-5 text-rose-400 group-hover:scale-110 transition duration-150" />
+                                <span className="font-bold text-rose-950 text-[10px] mt-1">Importer un fichier</span>
+                              </label>
+                            </div>
+
+                            <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-xl flex flex-col justify-center">
+                              <span className="text-[9px] text-zinc-500 font-bold mb-1">Lien URL de l'image</span>
+                              <input
+                                type="text"
+                                placeholder="ex: https://images.unsplash.com/..."
+                                value={editCatImageUrl.startsWith('data:') ? '' : editCatImageUrl}
+                                onChange={(e) => setEditCatImageUrl(e.target.value)}
+                                className="w-full p-2 bg-white border border-zinc-200 rounded-lg text-[10px] font-mono"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Image preview */}
+                          {editCatImageUrl && (
+                            <div className="p-2.5 bg-zinc-50 border border-zinc-200 rounded-xl flex items-center justify-between">
+                              <div className="flex items-center space-x-2.5">
+                                <img 
+                                  src={editCatImageUrl} 
+                                  alt="Aperçu" 
+                                  className="h-10 w-10 object-cover rounded-lg border border-rose-100"
+                                  referrerPolicy="no-referrer"
+                                />
+                                <div className="max-w-[160px]">
+                                  <span className="font-bold text-rose-950 text-[10px] block leading-none">Aperçu</span>
+                                  <span className="text-[9px] text-zinc-400 font-mono block truncate mt-0.5">
+                                    {editCatImageUrl.startsWith('data:') ? 'Image importée (Base64)' : editCatImageUrl}
+                                  </span>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setEditCatImageUrl('')}
+                                className="px-2 py-1 bg-red-50 hover:bg-red-100 text-red-600 font-extrabold text-[9px] rounded-md transition"
+                              >
+                                Retirer
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       <div className="pt-2 flex justify-end gap-2.5">
