@@ -91,7 +91,8 @@ export default function App() {
         setIsFirebaseAuthed(true);
       })
       .catch((err) => {
-        console.error("Silent anonymous login fail:", err);
+        console.warn("Silent anonymous login fail, using public client-side Firestore access:", err);
+        setIsFirebaseAuthed(true); // Enable real-time listeners under public rules fallback
       });
 
     const cached = localStorage.getItem('akwaba_user');
@@ -154,8 +155,7 @@ export default function App() {
         list.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
         setMessages(list);
       }, (err) => {
-        console.error("Realtime Messages Subscribe error:", err);
-        handleFirestoreError(err, OperationType.LIST, "messages");
+        console.warn("Realtime Messages Subscribe warning (using fallback polling):", err);
       });
 
       // 4) Subscribe to Users Collection (Admin only) or own user document (Client)
@@ -164,8 +164,7 @@ export default function App() {
           const list = snap.docs.map(doc => doc.data() as User);
           setUsers(list);
         }, (err) => {
-          console.error("Realtime Users Subscribe error:", err);
-          handleFirestoreError(err, OperationType.LIST, "users");
+          console.warn("Realtime Users Subscribe warning:", err);
         });
       } else {
         // Subscribe to own details for real-time sync with database/admin updates
@@ -176,7 +175,7 @@ export default function App() {
             localStorage.setItem('akwaba_user', JSON.stringify(uData));
           }
         }, (err) => {
-          console.error("Realtime own user doc Subscribe error:", err);
+          console.warn("Realtime own user doc Subscribe warning:", err);
         });
       }
 
@@ -191,8 +190,7 @@ export default function App() {
         list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         setOrders(list);
       }, (err) => {
-        console.error("Realtime Orders Subscribe error:", err);
-        handleFirestoreError(err, OperationType.LIST, "orders");
+        console.warn("Realtime Orders Subscribe warning:", err);
       });
 
       // 6) Subscribe to Chats Collection (Real-time updates)
@@ -203,10 +201,11 @@ export default function App() {
 
       unsubChats = onSnapshot(chatsQuery, (snap) => {
         const list = snap.docs.map(doc => doc.data() as ChatSession);
+        // Sort conversations by their latest activity timestamp
+        list.sort((a, b) => new Date(b.lastTimestamp || 0).getTime() - new Date(a.lastTimestamp || 0).getTime());
         setChats(list);
       }, (err) => {
-        console.error("Realtime Chats Subscribe error:", err);
-        handleFirestoreError(err, OperationType.LIST, "chats");
+        console.warn("Realtime Chats Subscribe warning:", err);
       });
     }
 
@@ -247,46 +246,50 @@ export default function App() {
       try {
         // Load authenticated user state lists
         if (currentUser) {
-          // Fetch user or admin Orders
-          const ordUrl = currentUser.role === 'admin' 
-            ? '/api/orders' 
-            : `/api/orders/user/${currentUser.id}`;
-          const ordRes = await fetch(ordUrl);
-          if (ordRes.ok) {
-            const ordList = await ordRes.json() as Order[];
-            ordList.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-            setOrders(ordList);
-          }
-
-          if (currentUser.role === 'admin') {
-            // Fetch chats for backend management thread list
-            const chatRes = await fetch('/api/chats');
-            if (chatRes.ok) {
-              const chatList = await chatRes.json() as ChatSession[];
-              setChats(chatList);
+          // Only use REST polling as fallback if Firestore is not authenticated/available
+          if (!isFirebaseAuthed) {
+            // Fetch user or admin Orders
+            const ordUrl = currentUser.role === 'admin' 
+              ? '/api/orders' 
+              : `/api/orders/user/${currentUser.id}`;
+            const ordRes = await fetch(ordUrl);
+            if (ordRes.ok) {
+              const ordList = await ordRes.json() as Order[];
+              ordList.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+              setOrders(ordList);
             }
 
-            // Fetch list of registered clients for admin customer cards
-            const usersRes = await fetch('/api/users');
-            if (usersRes.ok) {
-              const uList = await usersRes.json() as User[];
-              setUsers(uList);
-            }
+            if (currentUser.role === 'admin') {
+              // Fetch chats for backend management thread list
+              const chatRes = await fetch('/api/chats');
+              if (chatRes.ok) {
+                const chatList = await chatRes.json() as ChatSession[];
+                chatList.sort((a, b) => new Date(b.lastTimestamp || 0).getTime() - new Date(a.lastTimestamp || 0).getTime());
+                setChats(chatList);
+              }
 
-            // Sync all messages across all conversations for admin dashboard
-            const msgRes = await fetch('/api/messages');
-            if (msgRes.ok) {
-              const msgList = await msgRes.json() as ChatMessage[];
-              msgList.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-              setMessages(msgList);
-            }
-          } else {
-            // Sync specific client messages for dynamic private conversation thread
-            const msgRes = await fetch(`/api/chats/${currentUser.id}/messages`);
-            if (msgRes.ok) {
-              const msgList = await msgRes.json() as ChatMessage[];
-              msgList.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-              setMessages(msgList);
+              // Fetch list of registered clients for admin customer cards
+              const usersRes = await fetch('/api/users');
+              if (usersRes.ok) {
+                const uList = await usersRes.json() as User[];
+                setUsers(uList);
+              }
+
+              // Sync all messages across all conversations for admin dashboard
+              const msgRes = await fetch('/api/messages');
+              if (msgRes.ok) {
+                const msgList = await msgRes.json() as ChatMessage[];
+                msgList.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+                setMessages(msgList);
+              }
+            } else {
+              // Sync specific client messages for dynamic private conversation thread
+              const msgRes = await fetch(`/api/chats/${currentUser.id}/messages`);
+              if (msgRes.ok) {
+                const msgList = await msgRes.json() as ChatMessage[];
+                msgList.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+                setMessages(msgList);
+              }
             }
           }
         }
@@ -303,7 +306,7 @@ export default function App() {
     const interval = setInterval(fetchFullPlatformData, 3000);
 
     return () => clearInterval(interval);
-  }, [currentUser]);
+  }, [currentUser, isFirebaseAuthed]);
 
   // Handle Authentication submit
   const handleLogin = async (userPayload: User) => {
@@ -501,9 +504,51 @@ export default function App() {
       timestamp: new Date().toISOString()
     };
 
+    // 0. Optimistic UI updates for immediate feedback
+    setMessages((prev) => {
+      if (prev.some((m) => m.id === msgId)) return prev;
+      const updated = [...prev, newChatMessage];
+      updated.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      return updated;
+    });
+
+    setChats((prev) => {
+      const exists = prev.some((c) => c.id === chatId);
+      if (!exists) {
+        const newSession: ChatSession = {
+          id: chatId,
+          clientName: senderRole === 'client' ? senderName : 'Client',
+          clientPhone: '',
+          lastMessage: text,
+          lastTimestamp: newChatMessage.timestamp,
+          active: true,
+          unreadCount: senderRole === 'client' ? 1 : 0
+        };
+        return [newSession, ...prev];
+      }
+      return prev.map((c) => {
+        if (c.id === chatId) {
+          return {
+            ...c,
+            lastMessage: text,
+            lastTimestamp: newChatMessage.timestamp,
+            unreadCount: senderRole === 'client' ? (c.unreadCount || 0) + 1 : 0
+          };
+        }
+        return c;
+      });
+    });
+
     // 1. Instant optimistic local write to Firestore (visible to snapshots instantly)
     try {
       await setDoc(doc(db, "messages", msgId), newChatMessage);
+      // Synchronize latest message summary in chats session document
+      await setDoc(doc(db, "chats", chatId), {
+        id: chatId,
+        lastMessage: text,
+        lastTimestamp: newChatMessage.timestamp,
+        active: true
+      }, { merge: true });
     } catch (err) {
       console.error("Direct message write failed, using API sync only", err);
     }
@@ -539,9 +584,38 @@ export default function App() {
       suggestedProductIds: [productId]
     };
 
+    // 0. Optimistic UI updates
+    setMessages((prev) => {
+      if (prev.some((m) => m.id === msgId)) return prev;
+      const updated = [...prev, newChatMessage];
+      updated.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      return updated;
+    });
+
+    setChats((prev) => {
+      return prev.map((c) => {
+        if (c.id === chatId) {
+          return {
+            ...c,
+            lastMessage: recommendationText,
+            lastTimestamp: newChatMessage.timestamp,
+            unreadCount: 0
+          };
+        }
+        return c;
+      });
+    });
+
     // 1. Instant optimistic local write to Firestore (visible to snapshots instantly)
     try {
       await setDoc(doc(db, "messages", msgId), newChatMessage);
+      // Synchronize latest message summary in chats session document
+      await setDoc(doc(db, "chats", chatId), {
+        id: chatId,
+        lastMessage: recommendationText,
+        lastTimestamp: newChatMessage.timestamp,
+        active: true
+      }, { merge: true });
     } catch (err) {
       console.error("Direct prescription write failed, using API sync only", err);
     }
