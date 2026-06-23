@@ -581,7 +581,7 @@ export default function App() {
         cart={cart}
         cartCount={cartTotalCount}
         onLogout={handleLogout}
-        onOpenCart={() => setIsCartOpen(true)}
+        onOpenCart={() => setActiveTab('cart')}
         activeTab={activeTab}
         setActiveTab={(tab) => {
           if (!currentUser && (tab === 'diagnostic' || tab === 'chat')) {
@@ -733,6 +733,7 @@ export default function App() {
                 onSendMessage={handleSendMessage}
                 onSendPharmacistPrescription={handleSendPharmacistPrescription}
                 onAddToCart={handleAddToCart}
+                onSelectProductDetails={(product) => setSelectedProduct(product)}
               />
             )}
           </>
@@ -753,6 +754,7 @@ export default function App() {
               onSendMessage={handleSendMessage}
               onSendPharmacistPrescription={handleSendPharmacistPrescription}
               onAddToCart={handleAddToCart}
+              onSelectProductDetails={(product) => setSelectedProduct(product)}
             />
           )
         )}

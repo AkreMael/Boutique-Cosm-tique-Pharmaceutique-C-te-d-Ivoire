@@ -26,6 +26,7 @@ interface AdminPanelProps {
   onSendMessage: (text: string, attachProdId?: string) => Promise<void>;
   onSendPharmacistPrescription: (chatId: string, productId: string) => Promise<void>;
   onAddToCart: (product: Product) => void;
+  onSelectProductDetails?: (product: Product) => void;
 }
 
 export default function AdminPanel({
@@ -42,7 +43,8 @@ export default function AdminPanel({
   messages,
   onSendMessage,
   onSendPharmacistPrescription,
-  onAddToCart
+  onAddToCart,
+  onSelectProductDetails
 }: AdminPanelProps) {
   const [adminTab, setAdminTab] = useState<'stats' | 'orders' | 'products' | 'promos' | 'categories' | 'messages' | 'modules' | 'items' | 'users' | 'logs'>('stats');
   const [stats, setStats] = useState<AdminStats | null>(null);
@@ -1645,7 +1647,7 @@ export default function AdminPanel({
               <PharmacistChat
                 currentUser={currentUser}
                 products={products}
-                currentProfile={currentUser.skinProfile}
+                currentProfile={users.find(u => u.id === activeChatUserId)?.skinProfile}
                 chats={chats}
                 messages={messages}
                 onSendMessage={onSendMessage}
@@ -1653,6 +1655,7 @@ export default function AdminPanel({
                 onAddToCart={onAddToCart}
                 defaultSelectedChatId={activeChatUserId}
                 onSelectChatSession={(chatId) => setActiveChatUserId(chatId)}
+                onSelectProductDetails={onSelectProductDetails}
               />
             </div>
           </div>

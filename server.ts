@@ -927,9 +927,8 @@ app.post("/api/chats/:chatId/messages", async (req, res) => {
     };
     await chatRef.set(sessionDetails, { merge: true });
 
-    // 3. AI Pharmacist integration
-    const settingsDoc = await adminDb.collection("settings").doc("config").get();
-    const isAiPharmacistEnabled = settingsDoc.exists ? settingsDoc.data()?.ai_pharmacist_enabled !== false : true;
+    // 3. AI Pharmacist integration (Disabled per User Request for manual exchanges)
+    const isAiPharmacistEnabled = false;
 
     if (sender === "client" && isAiPharmacistEnabled) {
       const prodSnapshot = await adminDb.collection("products").get();

@@ -13,6 +13,7 @@ interface PharmacistChatProps {
   onSendPharmacistPrescription?: (chatId: string, productId: string) => void;
   onAddToCart?: (product: Product) => void;
   defaultSelectedChatId?: string;
+  onSelectProductDetails?: (product: Product) => void;
 }
 
 export default function PharmacistChat({
@@ -25,11 +26,11 @@ export default function PharmacistChat({
   onSelectChatSession,
   onSendPharmacistPrescription,
   onAddToCart,
-  defaultSelectedChatId
+  defaultSelectedChatId,
+  onSelectProductDetails
 }: PharmacistChatProps) {
   const [inputText, setInputText] = useState('');
   const [selectedChatId, setSelectedChatId] = useState<string>(defaultSelectedChatId || currentUser.id);
-  const [isAiPharmacistEnabled, setIsAiPharmacistEnabled] = useState(true);
   const [sending, setSending] = useState(false);
   const [receiptImage, setReceiptImage] = useState<string | null>(null);
   
@@ -92,20 +93,6 @@ export default function PharmacistChat({
     setReceiptImage(picked);
   };
 
-  // Switch active AI pharmacist setting
-  const toggleAiMode = async (enabled: boolean) => {
-    setIsAiPharmacistEnabled(enabled);
-    try {
-      await fetch('/api/settings/ai-pharmacist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enabled })
-      });
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
   return (
     <div id="beauty-advising-board" className="py-8 bg-zinc-50 min-h-[calc(100vh-80px)] flex flex-col justify-between">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex-1 grid grid-cols-1 md:grid-cols-12 gap-8">
@@ -119,25 +106,6 @@ export default function PharmacistChat({
                 <h3 className="font-bold text-rose-950 text-sm">Discussions Clients</h3>
                 <p className="text-[10px] text-zinc-400 font-mono">Boîte de réception Abidjan</p>
               </div>
-            </div>
-
-            {/* AI Control switch for automated assistance */}
-            <div className="p-3 bg-rose-50/50 rounded-2xl border border-rose-100 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-bold text-rose-950">Conseillère IA (Inès)</p>
-                <p className="text-[9px] text-zinc-500 leading-normal">L'IA répond instantanément quand vous êtes occupé.</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => toggleAiMode(!isAiPharmacistEnabled)}
-                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none ${
-                  isAiPharmacistEnabled ? 'bg-rose-500' : 'bg-zinc-300'
-                }`}
-              >
-                <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ${
-                  isAiPharmacistEnabled ? 'translate-x-5' : 'translate-x-0'
-                }`}></span>
-              </button>
             </div>
 
             {/* Sessions Scroll List */}
@@ -200,7 +168,7 @@ export default function PharmacistChat({
               </div>
               <div>
                 <h4 className="text-sm font-bold text-rose-950 leading-tight">
-                  {currentUser.role === 'client' ? 'Inès, Conseillère Beauté (AI)' : `Discussion avec ${activeSessionDetails?.clientName || 'Client'}`}
+                  {currentUser.role === 'client' ? 'Votre Conseillère Beauté (Omi\'i Institut)' : `Discussion avec ${activeSessionDetails?.clientName || 'Client'}`}
                 </h4>
                 <p className="text-[10px] text-rose-600 flex items-center gap-1 mt-0.5 font-medium">
                   <span className="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block animate-pulse"></span>
@@ -208,14 +176,6 @@ export default function PharmacistChat({
                 </p>
               </div>
             </div>
-
-            {/* If Client, offer manual toggle AI Mode details indicator */}
-            {currentUser.role === 'client' && (
-              <div className="flex items-center space-x-1 bg-rose-50/50 border border-rose-100 p-1.5 rounded-xl text-[9px] font-mono font-bold text-rose-800">
-                <span>Assistante IA Activée :</span>
-                <span className="text-emerald-600">OUI</span>
-              </div>
-            )}
           </div>
 
           {/* Active Messages Area */}
@@ -251,24 +211,53 @@ export default function PharmacistChat({
                     {/* Prescribed products suggestions inserted in chat */}
                     {msg.suggestedProductIds && msg.suggestedProductIds.length > 0 && (
                       <div className="mt-4 pt-3 border-t border-zinc-200/40 space-y-2">
-                        <p className="text-[10px] uppercase tracking-wide font-extrabold text-rose-300">Suggestions d'Articles de Soins :</p>
+                        <p className="text-[10px] uppercase tracking-wide font-extrabold text-rose-400">Suggestions d'Articles de Soins :</p>
                         
                         {msg.suggestedProductIds.map((pId) => {
                           const pObj = products.find((p) => p.id === pId);
                           if (!pObj) return null;
                           return (
-                            <div key={pId} className="p-3 bg-white text-zinc-800 rounded-2xl flex items-center justify-between border border-zinc-150 gap-3 shadow-sm">
-                              <div className="min-w-0">
-                                <p className="font-bold text-xs truncate leading-normal text-rose-950">{pObj.name}</p>
-                                <p className="text-[9px] text-zinc-400">{pObj.brand} • {pObj.category}</p>
-                                <p className="text-[11px] font-black text-rose-800 mt-1">{pObj.promoPrice ? pObj.promoPrice : pObj.price} F CFA</p>
+                            <div 
+                              key={pId} 
+                              onClick={() => onSelectProductDetails && onSelectProductDetails(pObj)}
+                              className="p-3 bg-white text-zinc-800 rounded-2xl flex flex-col sm:flex-row gap-3 border border-zinc-150 shadow-sm transition hover:border-rose-300 hover:shadow-md cursor-pointer group text-left"
+                            >
+                              <img 
+                                src={pObj.images?.[0] || 'https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=150&auto=format&fit=crop'} 
+                                alt={pObj.name} 
+                                className="h-20 w-20 object-cover rounded-xl shrink-0 border border-zinc-100 group-hover:scale-102 transition-transform self-center" 
+                              />
+                              <div className="flex-1 min-w-0 flex flex-col justify-between">
+                                <div>
+                                  <h4 className="font-bold text-xs text-rose-950 group-hover:text-rose-700 transition-colors line-clamp-1">{pObj.name}</h4>
+                                  <p className="text-[9px] text-zinc-400 font-medium">{pObj.brand} • {pObj.category}</p>
+                                  {pObj.description && (
+                                    <p className="text-[10px] text-zinc-500 mt-1 line-clamp-2 leading-relaxed">{pObj.description}</p>
+                                  )}
+                                </div>
+                                <div className="flex items-center justify-between mt-2 gap-2">
+                                  <p className="text-xs font-black text-rose-800">
+                                    {pObj.promoPrice ? (
+                                      <span className="flex items-center gap-1.5">
+                                        <span>{pObj.promoPrice} CFA</span>
+                                        <span className="text-[9px] text-zinc-400 line-through font-normal">{pObj.price} CFA</span>
+                                      </span>
+                                    ) : (
+                                      <span>{pObj.price} CFA</span>
+                                    )}
+                                  </p>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation(); // prevent opening details modal
+                                      if (onAddToCart) onAddToCart(pObj);
+                                    }}
+                                    className="px-2.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-[10px] rounded-lg flex items-center space-x-1 cursor-pointer shrink-0 transition shadow-xs"
+                                  >
+                                    <ShoppingBag className="h-3 w-3" />
+                                    <span>Ajouter</span>
+                                  </button>
+                                </div>
                               </div>
-                              <button
-                                onClick={() => onAddToCart && onAddToCart(pObj)}
-                                className="px-3 py-1.5 bg-rose-500 hover:bg-rose-600 text-white font-extrabold text-[10px] rounded-xl flex items-center space-x-1 cursor-pointer shrink-0"
-                              >
-                                <span>Ajouter</span>
-                              </button>
                             </div>
                           );
                         })}
