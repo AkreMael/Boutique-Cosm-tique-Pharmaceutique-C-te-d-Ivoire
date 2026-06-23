@@ -324,6 +324,25 @@ export default function App() {
       setCurrentUser(synchronizedUser);
       setShowLoginModal(false);
 
+      // Register profile in Firestore client-side and initialize active chat session
+      if (isFirebaseAuthed) {
+        try {
+          await setDoc(doc(db, "users", synchronizedUser.id), synchronizedUser, { merge: true });
+          
+          if (synchronizedUser.role === 'client') {
+            await setDoc(doc(db, "chats", synchronizedUser.id), {
+              id: synchronizedUser.id,
+              clientName: synchronizedUser.name,
+              clientPhone: synchronizedUser.phone,
+              clientCity: synchronizedUser.city || '',
+              active: true
+            }, { merge: true });
+          }
+        } catch (dbErr) {
+          console.error("Firestore user registration merge error:", dbErr);
+        }
+      }
+
       if (synchronizedUser.role === 'admin') {
         setActiveTab('admin');
         setAdminViewMode('admin');
@@ -418,13 +437,31 @@ export default function App() {
     localStorage.setItem('akwaba_user', JSON.stringify(updatedUser));
 
     try {
+      const dbDiagId = `diag-${Date.now()}`;
+
       // 1. Direct Firestore setDoc on client-side for absolute instant database replication
       if (isFirebaseAuthed) {
-        await setDoc(doc(db, "users", currentUser.id), { skinProfile: profile }, { merge: true });
+        await setDoc(doc(db, "users", updatedUser.id), { skinProfile: profile }, { merge: true });
+        
+        // Save matching diagnostic record inside diagnostics collection
+        await setDoc(doc(db, "diagnostics", dbDiagId), {
+          id: dbDiagId,
+          userId: updatedUser.id,
+          userName: updatedUser.name,
+          userPhone: updatedUser.phone,
+          userCity: updatedUser.city || '',
+          gender: profile.gender,
+          age: profile.age,
+          skinType: profile.skinType,
+          hairType: profile.hairType,
+          concerns: profile.concerns || [],
+          result: diagnosticResult,
+          createdAt: new Date().toISOString()
+        });
       }
 
       // 2. Hit profile express endpoint for record consistency
-      await fetch(`/api/users/${currentUser.id}/profile`, {
+      await fetch(`/api/users/${updatedUser.id}/profile`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedUser)
@@ -435,10 +472,10 @@ export default function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: currentUser.id,
-          userName: currentUser.name,
-          userPhone: currentUser.phone,
-          userCity: currentUser.city || '',
+          userId: updatedUser.id,
+          userName: updatedUser.name,
+          userPhone: updatedUser.phone,
+          userCity: updatedUser.city || '',
           profile: profile,
           result: diagnosticResult
         })

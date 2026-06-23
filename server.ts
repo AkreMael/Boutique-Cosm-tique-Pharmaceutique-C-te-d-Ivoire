@@ -844,8 +844,25 @@ app.get("/api/messages", async (req, res) => {
 // 4. Pharmacy Advising Chat System (with Gemini intelligence + auto-replies)
 app.get("/api/chats", async (req, res) => {
   try {
-    const snapshot = await adminDb.collection("chats").orderBy("lastTimestamp", "desc").get();
-    const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const chatsSnapshot = await adminDb.collection("chats").orderBy("lastTimestamp", "desc").get();
+    const usersSnapshot = await adminDb.collection("users").get();
+    
+    const usersMap = new Map();
+    usersSnapshot.forEach(doc => {
+      usersMap.set(doc.id, doc.data());
+    });
+
+    const list = chatsSnapshot.docs.map(doc => {
+      const chatData = doc.data() as any;
+      const matchingUser = usersMap.get(doc.id); // Since chatId is the userId for client sessions
+      return {
+        id: doc.id,
+        ...chatData,
+        clientName: matchingUser?.name || chatData.clientName || 'Client de passage',
+        clientPhone: matchingUser?.phone || chatData.clientPhone || '',
+        clientCity: matchingUser?.city || chatData.clientCity || ''
+      };
+    });
     res.json(list);
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
@@ -884,14 +901,25 @@ app.post("/api/chats/:chatId/messages", async (req, res) => {
     };
     await adminDb.collection("messages").doc(msgId).set(userMsg);
 
-    // 2. Refresh Chat Session
+    // 2. Lookup registered user to keep chat session name, phone and city fully synchronized
+    const userRef = adminDb.collection("users").doc(chatId);
+    const userDoc = await userRef.get();
+    const userData = userDoc.exists ? userDoc.data() : null;
+
+    // 3. Refresh Chat Session
     const chatRef = adminDb.collection("chats").doc(chatId);
     const chatDoc = await chatRef.get();
     const hasUnread = sender === "client";
+    
+    const finalClientName = userData?.name || (sender === "client" ? senderName : (chatDoc.exists ? chatDoc.data()?.clientName : "Client"));
+    const finalClientPhone = userData?.phone || (chatDoc.exists ? chatDoc.data()?.clientPhone : "");
+    const finalClientCity = userData?.city || (chatDoc.exists ? chatDoc.data()?.clientCity : "");
+
     const sessionDetails = {
       id: chatId,
-      clientName: sender === "client" ? senderName : (chatDoc.exists ? chatDoc.data()?.clientName : "Client"),
-      clientPhone: chatDoc.exists ? chatDoc.data()?.clientPhone : "",
+      clientName: finalClientName,
+      clientPhone: finalClientPhone,
+      clientCity: finalClientCity,
       lastMessage: message,
       lastTimestamp: new Date().toISOString(),
       active: true,

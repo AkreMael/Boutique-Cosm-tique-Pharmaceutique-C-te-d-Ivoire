@@ -838,7 +838,7 @@ export default function AdminPanel({
                   ))}
 
                   {orders.length === 0 && (
-                    <tr>
+                    <tr key="empty-orders">
                       <td colSpan={7} className="py-12 text-center text-zinc-400 font-normal">
                         Aucune commande enregistrée pour le moment.
                       </td>
@@ -1527,7 +1527,7 @@ export default function AdminPanel({
                       })}
 
                       {users.filter(u => u.role !== 'admin').length === 0 && (
-                        <tr>
+                        <tr key="empty-users">
                           <td colSpan={4} className="text-center py-12 text-zinc-400">
                             <span className="text-2xl">👤</span>
                             <p className="text-xs font-bold mt-2 font-sans">Aucun client enregistré pour l'instant</p>
@@ -1617,7 +1617,7 @@ export default function AdminPanel({
                       ))}
 
                       {diagnosticsList.length === 0 && (
-                        <tr>
+                        <tr key="empty-diagnostics">
                           <td colSpan={4} className="text-center py-12 text-zinc-400">
                             <span className="text-2xl">📋</span>
                             <p className="text-xs font-bold mt-2 font-sans">Aucun diagnostic enregistré dans la base de données</p>

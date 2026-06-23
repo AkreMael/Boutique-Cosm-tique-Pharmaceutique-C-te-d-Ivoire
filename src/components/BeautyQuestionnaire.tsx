@@ -73,11 +73,10 @@ export default function BeautyQuestionnaire({
       setShowConfirmationPopup(true);
     } catch (err) {
       console.error(err);
-      // Hard fallback
       const defaultDiagnostic = {
-        diagnostic: `Diagnostic dermo-cosmétique IA pour un profil de type ${skinType} avec préoccupations (${concerns.join(', ')}). Sous le climat tropical d'Abidjan, l'hyperactivité sébacée doit être traitée avec douceur sans décaper.`,
+        diagnostic: `Diagnostic dermo-cosmétique IA pour un profil de type ${skinType} avec préoccupations (${(concerns || []).join(', ')}). Sous le climat tropical d'Abidjan, l'hyperactivité sébacée doit être traitée avec douceur sans décaper.`,
         routineMatin: [
-          { step: "1. Netfoyage ciblé", instruction: "Utilisez un nettoyant doux moussant pour rafraîchir l'épiderme." },
+          { step: "1. Nettoyage ciblé", instruction: "Utilisez un nettoyant doux moussant pour rafraîchir l'épiderme." },
           { step: "2. Sérum Éclat", instruction: "Appliquez notre sérum correcteur pour atténuer les taches." },
           { step: "3. Crème Solaire protectrice", instruction: "Crucial à Abidjan pour empêcher les UV de graver les taches et de dessécher les cheveux." }
         ],
@@ -103,11 +102,11 @@ export default function BeautyQuestionnaire({
   const getRecommendedProducts = () => {
     return products.filter((p) => {
       // If client concerns matches product category/description keywords
-      return concerns.some((concern) => {
-        const keyword = concern.toLowerCase();
-        const prodName = p.name.toLowerCase();
-        const prodDesc = p.description.toLowerCase();
-        const prodCat = p.category.toLowerCase();
+      return (concerns || []).some((concern) => {
+        const keyword = (concern || '').toLowerCase();
+        const prodName = (p.name || '').toLowerCase();
+        const prodDesc = (p.description || '').toLowerCase();
+        const prodCat = (p.category || '').toLowerCase();
 
         if (keyword.includes('acné') && (prodName.includes('imperfection') || prodDesc.includes('acné') || prodDesc.includes('nettoyant'))) return true;
         if (keyword.includes('taches') && (prodDesc.includes('tache') || prodDesc.includes('éclat') || prodName.includes('sérum'))) return true;
@@ -115,12 +114,12 @@ export default function BeautyQuestionnaire({
         if (keyword.includes('chute') && prodCat.includes('capillaires')) return true;
         if (keyword.includes('sensibilité') && (prodCat.includes('bebe') || prodCat.includes('parapharmacie'))) return true;
         return false;
-      }) || (p.promoPrice && concerns.length === 0);
+      }) || (p.promoPrice && (concerns || []).length === 0);
     }).slice(0, 3); // top 3 products max
   };
 
   const currentResult = diagnosis || (currentProfile ? {
-    diagnostic: `Bonjour. Votre type de peau est ${currentProfile.skinType} et vos cheveux sont ${currentProfile.hairType}. Vos préoccupations principales concernent : ${currentProfile.concerns.join(', ')}.`,
+    diagnostic: `Bonjour. Votre type de peau est ${currentProfile?.skinType || 'Mixte'} et vos cheveux sont ${currentProfile?.hairType || 'Crépu'}. Vos préoccupations principales concernent : ${(currentProfile?.concerns || []).join(', ')}.`,
     routineMatin: [
       { step: "1. Nettoyage purifiant", instruction: "Éliminez le sébum accumulé sans dessécher avec un savon doux à base d'huile de coco." },
       { step: "2. Écran Solaire Protecteur", instruction: "Appliquez obligatoirement l'écran solaire fluide FPS50+ anti-brillance pour résister au climat d'Abidjan." }
