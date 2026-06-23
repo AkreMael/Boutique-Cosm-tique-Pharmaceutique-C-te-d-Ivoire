@@ -380,7 +380,7 @@ export default function Cart({
                   <div className="w-8 h-2 bg-zinc-800 rounded-full mx-auto mb-4"></div>
                   <p className="text-[9px] text-zinc-400 font-bold uppercase mb-2">Validation SIM {operator} Money</p>
                   <p className="text-[11px] mb-4 text-left leading-relaxed text-yellow-300">
-                    Retrait de {totalCost.toLocaleString()} CFA autorisé pour Akwaba PharmaSkin d'Abidjan.
+                    Retrait de {totalCost.toLocaleString()} CFA autorisé pour Omi'i Institut d'Abidjan.
                   </p>
                   <p className="text-[10px] text-zinc-400 mb-4 text-left">
                     Entrez votre code confidentiel à 4 chiffres :

@@ -139,7 +139,7 @@ export default function LoginScreen({ onLogin, isModal = false }: LoginScreenPro
         </div>
         <div>
           <h2 className="text-2xl font-extrabold text-rose-950 font-sans tracking-tight leading-tight">
-            Akwaba Beauté
+            Omi'i Institut
           </h2>
           <p className="text-xs text-zinc-400 font-mono tracking-widest uppercase">
             Boutique Cosmétique & Soins • CI
@@ -252,7 +252,7 @@ export default function LoginScreen({ onLogin, isModal = false }: LoginScreenPro
       ) : (
         <form onSubmit={handleAdminSubmit} className="space-y-4">
           <div className="p-4 bg-zinc-50 border border-zinc-150 rounded-2xl text-[11px] text-zinc-500 leading-relaxed max-w-sm">
-            🔑 L'administration d'Akwaba Beauté requiert une authentification unique. Renseignez vos clés de console exclusives.
+            🔑 L'administration d'Omi'i Institut requiert une authentification unique. Renseignez vos clés de console exclusives.
           </div>
 
           <div className="space-y-1">

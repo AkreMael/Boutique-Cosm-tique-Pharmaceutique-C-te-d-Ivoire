@@ -74,7 +74,7 @@ export default function CartScreen({
       userId: currentUser.id,
       customerName,
       customerPhone: phone,
-      customerEmail: email || `${currentUser.id}@akwaba.ci`,
+      customerEmail: email || `${currentUser.id}@omii.ci`,
       address,
       city,
       items: cart.map((item) => ({
@@ -109,7 +109,7 @@ export default function CartScreen({
         userId: currentUser.id,
         customerName: customerName || currentUser.name,
         customerPhone: phone,
-        customerEmail: email || 'visiteur@akwaba.ci',
+        customerEmail: email || 'visiteur@omii.ci',
         address,
         city,
         items: cart.map((item) => ({

@@ -849,7 +849,11 @@ export default function AdminPanel({
                   setProdName('');
                   setProdDesc('');
                   setProdPrice(5000);
+                  setProdPromo(undefined);
                   setProdStock(20);
+                  setProdImg('https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=600&auto=format&fit=crop');
+                  setProdCat(categories[0]?.slug || 'soins-peau');
+                  setProdBrand('PharmaPure CI');
                   setShowProductModal(true);
                 }}
                 className="px-5 py-3 bg-rose-950 hover:bg-rose-900 text-white font-bold text-xs rounded-xl flex items-center space-x-2 shadow-md cursor-pointer"

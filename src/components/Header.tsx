@@ -58,7 +58,7 @@ export default function Header({
             </div>
             <div>
               <h1 className="text-xl font-bold font-sans text-rose-950 tracking-tight leading-none animate-fade-in">
-                Akwaba <span className="text-rose-500">Beauté</span>
+                Omi'i <span className="text-rose-500">Institut</span>
               </h1>
               <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-mono">Boutique Cosmétique & Soins</p>
             </div>
@@ -105,6 +105,16 @@ export default function Header({
                 }`}
               >
                 Offres
+              </button>
+              <button
+                onClick={() => setActiveTab('diagnostic')}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                  activeTab === 'diagnostic'
+                    ? 'bg-rose-50 text-rose-950 font-bold border border-rose-100'
+                    : 'text-zinc-600 hover:text-rose-950 hover:bg-zinc-50'
+                }`}
+              >
+                Diagnostic de Peau
               </button>
               <button
                 onClick={() => setActiveTab('cart')}

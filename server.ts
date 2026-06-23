@@ -354,7 +354,7 @@ const SEED_PRODUCTS = [
     stock: 40,
     images: ["https://images.unsplash.com/photo-1571781926291-c477ebfd024b?q=80&w=600&auto=format&fit=crop"],
     category: "pommades-traitements",
-    brand: "Akwaba Beauté",
+    brand: "Omi'i Institut",
     dateAdded: "2026-06-15T10:00:00Z",
     isAvailable: true
   },
@@ -366,7 +366,7 @@ const SEED_PRODUCTS = [
     stock: 42,
     images: ["https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?q=80&w=600&auto=format&fit=crop"],
     category: "pommades-traitements",
-    brand: "Akwaba Beauté",
+    brand: "Omi'i Institut",
     dateAdded: "2026-06-16T12:00:00Z",
     isAvailable: true
   },
@@ -620,6 +620,27 @@ app.post("/api/products", async (req, res) => {
       id,
       dateAdded: new Date().toISOString()
     };
+
+    // Cast fields to their proper types
+    if (newProduct.price) newProduct.price = Number(newProduct.price);
+    if (newProduct.promoPrice !== undefined && newProduct.promoPrice !== null && newProduct.promoPrice !== "") {
+      newProduct.promoPrice = Number(newProduct.promoPrice);
+      if (Number(newProduct.promoPrice) <= 0) {
+        delete newProduct.promoPrice;
+      }
+    } else {
+      delete newProduct.promoPrice;
+    }
+    if (newProduct.stock !== undefined) {
+      newProduct.stock = Number(newProduct.stock);
+      newProduct.isAvailable = newProduct.stock > 0;
+      newProduct.isActive = newProduct.stock > 0;
+    } else {
+      newProduct.stock = 0;
+      newProduct.isAvailable = false;
+      newProduct.isActive = false;
+    }
+
     await adminDb.collection("products").doc(id).set(newProduct);
     res.status(201).json(newProduct);
   } catch (err) {
@@ -898,9 +919,9 @@ app.post("/api/chats/:chatId/messages", async (req, res) => {
         ? `Le client est un(e) ${userProfile.gender} de ${userProfile.age} ans. Type de peau : ${userProfile.skinType}, Cuir chevelu/cheveux : ${userProfile.hairType}. Préoccupations : ${userProfile.concerns.join(", ")}.`
         : "Le client n'a pas encore complété son questionnaire beauté.";
 
-      const systemPrompt = `Tu es Inès, conseillère experte en beauté cosmétique pour notre boutique unique Akwaba Beauté en Côte d'Ivoire.
+      const systemPrompt = `Tu es Inès, conseillère experte en beauté cosmétique pour notre boutique unique Omi'i Institut en Côte d'Ivoire.
 Ton objectif est d'écouter les préoccupations de beauté des clients, de poser un diagnostic de peau et capillaire complice avant de lui suggérer les produits du catalogue ci-dessous.
-Réponds exclusivement en Français (ton chaleureux, complice et poli, propre aux ivoiriens, utilise des acronymes comme "Akwaba").
+Réponds exclusivement en Français (ton chaleureux, complice et poli, propre aux ivoiriens, utilise de chaleureuses expressions).
 Toutes tes suggestions de prix doivent être exactes par rapport au catalogue ci-dessous.
 
 INFORMATIONS DU CLIENT :
@@ -935,7 +956,7 @@ Consignes :
           });
         } else {
           // Offline Fallback
-          aiText = "Akwaba! Pour corriger les taches et illuminer votre teint en douceur, notre Sérum Anti-Taches Intensif à 9500 FCFA est particulièrement conseillé. Notre équipe beauté reste à votre pleine écoute !";
+          aiText = "Bienvenue ! Pour corriger les taches et illuminer votre teint en douceur, notre Sérum Anti-Taches Intensif à 9500 FCFA est particulièrement conseillé par l'équipe d'Omi'i Institut. Notre équipe beauté reste à votre pleine écoute !";
           suggestedIds = ["prod-1"];
         }
 

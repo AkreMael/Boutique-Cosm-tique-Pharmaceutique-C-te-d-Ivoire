@@ -213,7 +213,7 @@ export default function PharmacistChat({
                 <span>Conseil & Coaching Beauté Personnalisé</span>
               </p>
               <p>
-                Bonjour et Akwaba dans notre espace conseil. Le climat de Côte d'Ivoire (milieu humide d'Abidjan ou sécheresse de l'Harmattan) nécessite de préserver l'éclat de votre peau avec des soins adaptés. Décrivez vos besoins à notre conseillère beauté pour obtenir des recommandations parfaites.
+                Bonjour et bienvenue dans l'espace conseil d'Omi'i Institut. Le climat de Côte d'Ivoire (milieu humide d'Abidjan ou sécheresse de l'Harmattan) nécessite de préserver l'éclat de votre peau avec des soins adaptés. Décrivez vos besoins à notre conseillère beauté pour obtenir des recommandations parfaites.
               </p>
             </div>
 

@@ -211,6 +211,34 @@ export default function Home({
         </div>
       </div>
 
+      {/* 🔮 DIAGNOSTIC IA INTÉGRÉ BANNER */}
+      <div className="px-4 py-4 max-w-7xl mx-auto">
+        <div className="bg-gradient-to-r from-rose-950 via-rose-900 to-pink-900 text-white p-6 sm:p-8 rounded-[2rem] shadow-sm relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="absolute top-0 right-0 h-32 w-32 bg-white/5 rounded-full blur-2xl"></div>
+          <div className="space-y-3 relative z-10 text-center md:text-left">
+            <span className="px-3 py-1 bg-white/10 text-rose-100 border border-white/20 rounded-full text-[10px] font-bold tracking-widest uppercase inline-block font-mono">
+              ★ Conseil Privé d'Omi'i Institut
+            </span>
+            <h3 className="text-xl sm:text-2xl font-black tracking-tight leading-tight font-sans">
+              Diagnostic de Peau & Capillaire Intelligent
+            </h3>
+            <p className="text-rose-100/80 text-xs max-w-lg leading-relaxed font-normal">
+              Quel climat faites-vous subir à votre peau ? Répondez à notre questionnaire et recevez instantanément votre routine beauté sur-mesure validée par nos pharmaciens-conseils.
+            </p>
+          </div>
+          <div className="shrink-0 relative z-10 w-full md:w-auto">
+            <button
+              onClick={() => onSwitchTab('diagnostic')}
+              className="w-full md:w-auto px-6 py-3.5 bg-rose-500 hover:bg-rose-600 text-white font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 shadow-md transition transform active:scale-95 cursor-pointer"
+            >
+              <Sparkles className="h-4 w-4 animate-pulse" />
+              <span>Démarrer mon diagnostic gratuit</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* 📦 SECTION 4: LES NOUVEAUTÉS (Scroll horizontal) */}
       {newProducts.length > 0 && (
         <div className="px-4 py-6 max-w-7xl mx-auto space-y-4 bg-rose-50/15 rounded-[2rem] my-4 border border-rose-50/40">

@@ -158,7 +158,7 @@ export default function BeautyQuestionnaire({
             
             <h3 className="text-2xl font-bold text-rose-950 mb-2">Comprendre votre Peau & vos Cheveux</h3>
             <p className="text-zinc-500 max-w-lg mb-8 leading-relaxed">
-              Que vous habitiez dans l'humidité lagunaire d'Abidjan, sous les rayons de San Pedro ou face à l'Harmattan sec de Korhogo, vos cellules réagissent différemment. Obtenez des conseils personnalisés de cosmétiques sains rédigés par notre conseiller IA d'Akwaba Beauté.
+              Que vous habitiez dans l'humidité lagunaire d'Abidjan, sous les rayons de San Pedro ou face à l'Harmattan sec de Korhogo, vos cellules réagissent différemment. Obtenez des conseils personnalisés de cosmétiques sains rédigés par notre conseiller IA d'Omi'i Institut.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-2xl mb-8 text-left">
@@ -503,7 +503,7 @@ export default function BeautyQuestionnaire({
                 </div>
                 <div>
                   <h5 className="font-bold text-sm">Besoin d'un conseil personnalisé ?</h5>
-                  <p className="text-xs text-rose-800">Notre assistante d'Akwaba Beauté vous guide gratuitement en direct.</p>
+                  <p className="text-xs text-rose-800">Notre assistante d'Omi'i Institut vous guide gratuitement en direct.</p>
                 </div>
               </div>
               

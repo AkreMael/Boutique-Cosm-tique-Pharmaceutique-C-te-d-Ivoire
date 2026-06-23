@@ -116,6 +116,8 @@ export default function App() {
 
   // 2. Real-Time Cloud Firestore Continuous Subscriptions (Public & Authenticated Collections)
   useEffect(() => {
+    if (!isFirebaseAuthed) return;
+
     // 1) Subscribe to Products Collection (Public Read allowed)
     const unsubProducts = onSnapshot(collection(db, "products"), (snap) => {
       const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
@@ -156,7 +158,7 @@ export default function App() {
         handleFirestoreError(err, OperationType.LIST, "messages");
       });
 
-      // 4) Subscribe to Users Collection (Admin only)
+      // 4) Subscribe to Users Collection (Admin only) or own user document (Client)
       if (currentUser.role === 'admin') {
         unsubUsers = onSnapshot(collection(db, "users"), (snap) => {
           const list = snap.docs.map(doc => doc.data() as User);
@@ -164,6 +166,17 @@ export default function App() {
         }, (err) => {
           console.error("Realtime Users Subscribe error:", err);
           handleFirestoreError(err, OperationType.LIST, "users");
+        });
+      } else {
+        // Subscribe to own details for real-time sync with database/admin updates
+        unsubUsers = onSnapshot(doc(db, "users", currentUser.id), (snap) => {
+          if (snap.exists()) {
+            const uData = snap.data() as User;
+            setCurrentUser(uData);
+            localStorage.setItem('akwaba_user', JSON.stringify(uData));
+          }
+        }, (err) => {
+          console.error("Realtime own user doc Subscribe error:", err);
         });
       }
 
@@ -405,7 +418,12 @@ export default function App() {
     localStorage.setItem('akwaba_user', JSON.stringify(updatedUser));
 
     try {
-      // Hit profile express endpoint for record consistency (updates database using privileged admin SDK)
+      // 1. Direct Firestore setDoc on client-side for absolute instant database replication
+      if (isFirebaseAuthed) {
+        await setDoc(doc(db, "users", currentUser.id), { skinProfile: profile }, { merge: true });
+      }
+
+      // 2. Hit profile express endpoint for record consistency
       await fetch(`/api/users/${currentUser.id}/profile`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -496,7 +514,7 @@ export default function App() {
     return (
       <div className="min-h-screen bg-rose-50/20 flex flex-col items-center justify-center font-sans">
         <div className="h-12 w-12 rounded-full border-4 border-rose-500 border-t-transparent animate-spin"></div>
-        <p className="text-xs font-mono text-rose-950 mt-4 tracking-widest uppercase">Akwaba Beauté • Chargement...</p>
+        <p className="text-xs font-mono text-rose-950 mt-4 tracking-widest uppercase">Omi'i Institut • Chargement...</p>
       </div>
     );
   }
@@ -821,7 +839,7 @@ export default function App() {
       <footer className="bg-zinc-900 text-zinc-400 py-8 border-t border-zinc-800 text-xs mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center sm:text-left flex flex-col sm:flex-row justify-between items-center gap-4">
           <div>
-            <p className="font-bold text-zinc-200 font-sans">Akwaba Beauté Côte d'Ivoire — Boutique en Ligne</p>
+            <p className="font-bold text-zinc-200 font-sans">Omi'i Institut — Boutique en Ligne</p>
             <p className="text-[10px] text-zinc-500 mt-1">Votre destination privilégiée pour les produits de beauté et de soins cosmétiques de qualité en Côte d'Ivoire.</p>
           </div>
           <div className="font-mono text-[10px] text-zinc-500 text-center sm:text-right">
@@ -919,7 +937,7 @@ export default function App() {
                     <div className="p-3 bg-rose-50/30 border border-rose-100 rounded-2xl text-[10px] text-zinc-650 leading-relaxed">
                       <p className="font-bold text-rose-900 mb-1 flex items-center gap-1.5">
                         <Sparkles className="h-3.5 w-3.5 text-rose-500" />
-                        <span>Akwaba Beauté Conseillère IA</span>
+                        <span>Omi'i Institut Conseillère IA</span>
                       </p>
                       Posez-moi vos questions ! Mon diagnostic s'améliore si vous décrivez votre type de peau ou routine dans votre espace profil.
                     </div>
@@ -1035,6 +1053,23 @@ export default function App() {
         >
           <BadgePercent className="h-5 w-5" />
           <span className="text-[10px] tracking-tight">Offres</span>
+        </button>
+
+        <button
+          onClick={() => {
+            if (!currentUser) {
+              setPendingAction({ type: 'switch_tab', tab: 'diagnostic' });
+              setShowLoginModal(true);
+            } else {
+              setActiveTab('diagnostic');
+            }
+          }}
+          className={`flex flex-col items-center gap-1 cursor-pointer transition duration-200 active:scale-90 ${
+            activeTab === 'diagnostic' ? 'text-rose-600 font-extrabold scale-102' : 'text-zinc-400 hover:text-zinc-650 font-semibold'
+          }`}
+        >
+          <Sparkles className="h-5 w-5 animate-pulse text-amber-500" />
+          <span className="text-[10px] tracking-tight">Diagnostic</span>
         </button>
 
         <button
