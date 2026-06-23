@@ -13,7 +13,7 @@ import CartScreen from './components/CartScreen';
 import ProfileScreen from './components/ProfileScreen';
 import { Product, Category, User, CartItem, Order, ChatSession, ChatMessage, BeautyProfile } from './types';
 import { HeartPulse, Plus, Check, Star, X, Shield, Info, ShoppingBag, MessageSquare, Send, Sparkles, Home as HomeIcon, Grid3X3, BadgePercent, ShoppingCart as BottomCartIcon, User as UserIcon } from 'lucide-react';
-import { db, collection, doc, onSnapshot, setDoc, query, where, authenticateAnonymous, handleFirestoreError, OperationType } from './lib/firebase';
+import { db, collection, doc, onSnapshot, setDoc, deleteDoc, query, where, authenticateAnonymous, handleFirestoreError, OperationType } from './lib/firebase';
 
 export default function App() {
   // Navigation tabs - Default with home (Accueil) per full-UI overhaul guidelines
@@ -562,6 +562,26 @@ export default function App() {
     });
   };
 
+  const handleDeleteMessage = async (messageId: string) => {
+    try {
+      await deleteDoc(doc(db, "messages", messageId));
+    } catch (err) {
+      console.error("Firestore message delete failed, syncing in background:", err);
+    }
+    fetch(`/api/messages/${messageId}`, { method: 'DELETE' })
+      .catch(err => console.error("Express delete message failed:", err));
+  };
+
+  const handleDeleteChatSession = async (chatId: string) => {
+    try {
+      await deleteDoc(doc(db, "chats", chatId));
+    } catch (err) {
+      console.error("Firestore chat session delete failed, syncing in background:", err);
+    }
+    fetch(`/api/chats/${chatId}`, { method: 'DELETE' })
+      .catch(err => console.error("Express delete chat session failed:", err));
+  };
+
   // Admin operational actions
   const handleAddProduct = async (prodPayload: Omit<Product, 'id' | 'dateAdded'>) => {
     await fetch('/api/products', {
@@ -852,6 +872,8 @@ export default function App() {
               onSendPharmacistPrescription={handleSendPharmacistPrescription}
               onAddToCart={handleAddToCart}
               onSelectProductDetails={(product) => setSelectedProduct(product)}
+              onDeleteMessage={handleDeleteMessage}
+              onDeleteChatSession={handleDeleteChatSession}
             />
           )
         )}
@@ -1058,7 +1080,7 @@ export default function App() {
 
           {/* Floating Compact Chat Window */}
           {isFloatingChatOpen && (
-            <div className="fixed bottom-24 right-6 w-80 sm:w-85 h-[420px] bg-white border border-rose-100/70 rounded-[2rem] shadow-2xl z-50 overflow-hidden flex flex-col justify-between animate-scale-up">
+            <div className="fixed bottom-40 right-6 w-80 sm:w-85 h-[420px] bg-white border border-rose-100/70 rounded-[2rem] shadow-2xl z-50 overflow-hidden flex flex-col justify-between animate-scale-up">
               
               {/* Header section with branding */}
               <div className="bg-rose-950 text-white p-4 shrink-0 flex items-center justify-between border-b border-rose-900 shadow-sm">

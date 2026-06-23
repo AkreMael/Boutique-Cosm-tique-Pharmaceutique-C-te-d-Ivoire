@@ -94,14 +94,21 @@ export default function CartScreen({
   const autocompleteRef = useRef<HTMLDivElement>(null);
 
   // Sync details when user updates or logs in
+  const lastUserIdRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (currentUser) {
-      setCustomerName(currentUser.name || '');
-      setPhone(currentUser.phone || '');
-      setCity(currentUser.city || '');
-      setCityInput(currentUser.city || '');
-      setAddress(currentUser.address || '');
-      setEmail(currentUser.email || '');
+      if (currentUser.id !== lastUserIdRef.current) {
+        lastUserIdRef.current = currentUser.id;
+        setCustomerName(currentUser.name || '');
+        setPhone(currentUser.phone || '');
+        setCity(currentUser.city || '');
+        setCityInput(currentUser.city || '');
+        setAddress(currentUser.address || '');
+        setEmail(currentUser.email || '');
+      }
+    } else {
+      lastUserIdRef.current = null;
     }
   }, [currentUser]);
 
@@ -416,7 +423,7 @@ export default function CartScreen({
                     {/* Customer Name */}
                     <div className="space-y-1.5">
                       <label className="text-[10px] uppercase font-mono tracking-wider font-bold text-zinc-500 block">
-                        Nom complet pour la réception <span className="text-red-500">*</span>
+                        Nom complet pour la réception <span className="text-zinc-400 font-normal">(🔒 Fixe)</span>
                       </label>
                       <div className="relative">
                         <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
@@ -425,10 +432,10 @@ export default function CartScreen({
                         <input
                           type="text"
                           required
-                          placeholder="Ex: Kouame Koffi Marc"
+                          readOnly
+                          placeholder="Nom complet"
                           value={customerName}
-                          onChange={(e) => setCustomerName(e.target.value)}
-                          className="w-full pl-9.5 pr-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs focus:outline-none focus:border-rose-300 focus:bg-white"
+                          className="w-full pl-9.5 pr-4 py-2.5 bg-zinc-100 border border-zinc-200 rounded-xl text-xs font-bold text-zinc-500 cursor-not-allowed select-none focus:outline-none"
                         />
                       </div>
                     </div>

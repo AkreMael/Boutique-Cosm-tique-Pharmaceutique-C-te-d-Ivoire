@@ -1022,6 +1022,36 @@ Consignes :
   }
 });
 
+// Delete specific message endpoint
+app.delete("/api/messages/:messageId", async (req, res) => {
+  const { messageId } = req.params;
+  try {
+    await adminDb.collection("messages").doc(messageId).delete();
+    res.json({ success: true, messageId });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+// Delete entire chat session and its messages endpoint
+app.delete("/api/chats/:chatId", async (req, res) => {
+  const { chatId } = req.params;
+  try {
+    // 1. Delete the chat session document
+    await adminDb.collection("chats").doc(chatId).delete();
+
+    // 2. Query and delete all messages belonging to this chat session
+    const messagesSnapshot = await adminDb.collection("messages").where("chatId", "==", chatId).get();
+    for (const docObj of messagesSnapshot.docs) {
+      await adminDb.collection("messages").doc(docObj.id).delete();
+    }
+
+    res.json({ success: true, chatId });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
 // Configure AI Pharmacist Mode switch
 app.post("/api/settings/ai-pharmacist", async (req, res) => {
   const { enabled } = req.body;

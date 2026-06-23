@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Sparkles, MessageSquare, ShoppingBag, Plus, BookOpen, User, CheckCheck, Compass, Info } from 'lucide-react';
+import { Send, Sparkles, MessageSquare, ShoppingBag, Plus, BookOpen, User, CheckCheck, Compass, Info, Trash2 } from 'lucide-react';
 import { ChatMessage, ChatSession, Product, User as AppUser, BeautyProfile } from '../types';
 
 interface PharmacistChatProps {
@@ -14,6 +14,8 @@ interface PharmacistChatProps {
   onAddToCart?: (product: Product) => void;
   defaultSelectedChatId?: string;
   onSelectProductDetails?: (product: Product) => void;
+  onDeleteMessage?: (messageId: string) => Promise<void>;
+  onDeleteChatSession?: (chatId: string) => Promise<void>;
 }
 
 export default function PharmacistChat({
@@ -27,12 +29,17 @@ export default function PharmacistChat({
   onSendPharmacistPrescription,
   onAddToCart,
   defaultSelectedChatId,
-  onSelectProductDetails
+  onSelectProductDetails,
+  onDeleteMessage,
+  onDeleteChatSession
 }: PharmacistChatProps) {
   const [inputText, setInputText] = useState('');
   const [selectedChatId, setSelectedChatId] = useState<string>(defaultSelectedChatId || currentUser.id);
   const [sending, setSending] = useState(false);
   const [receiptImage, setReceiptImage] = useState<string | null>(null);
+  
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ type: 'message' | 'session'; id: string } | null>(null);
   
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -192,6 +199,20 @@ export default function PharmacistChat({
                 </p>
               </div>
             </div>
+
+            {currentUser.role === 'admin' && activeSessionDetails && (
+              <button
+                onClick={() => {
+                  setDeleteTarget({ type: 'session', id: selectedChatId });
+                  setConfirmModalOpen(true);
+                }}
+                className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 font-bold text-[10px] rounded-lg transition border border-rose-200 flex items-center gap-1 cursor-pointer"
+                title="Supprimer toute la conversation"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Supprimer la conversation</span>
+              </button>
+            )}
           </div>
 
           {/* Active Messages Area */}
@@ -280,9 +301,23 @@ export default function PharmacistChat({
                       </div>
                     )}
                   </div>
-                  <span className="text-[9px] text-zinc-400 font-mono mt-1 px-1">
-                    {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
+                  <div className="flex items-center gap-2 mt-1 px-1 select-none">
+                    <span className="text-[9px] text-zinc-400 font-mono">
+                      {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                    {currentUser.role === 'admin' && (
+                      <button
+                        onClick={() => {
+                          setDeleteTarget({ type: 'message', id: msg.id });
+                          setConfirmModalOpen(true);
+                        }}
+                        className="text-zinc-400 hover:text-red-500 transition p-0.5 rounded cursor-pointer"
+                        title="Supprimer ce message"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -402,6 +437,52 @@ export default function PharmacistChat({
         </div>
 
       </div>
+      {/* Dynamic Deletion Confirmation Modal */}
+      {confirmModalOpen && deleteTarget && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full border border-rose-100 shadow-2xl animate-scale-up space-y-4 text-left">
+            <div className="flex items-center gap-3 text-amber-600">
+              <span className="p-2.5 bg-amber-50 rounded-2xl text-base">⚠️</span>
+              <h3 className="font-extrabold text-rose-950 text-sm">Confirmation de Suppression</h3>
+            </div>
+            <p className="text-xs text-zinc-500 leading-relaxed">
+              {deleteTarget.type === 'message' 
+                ? "Voulez-vous vraiment supprimer ce message spécifique ? Cette action est irréversible et synchronisée immédiatement."
+                : "Voulez-vous vraiment supprimer toute la conversation avec ce client ? Tous les messages seront effacés et la conversation disparaîtra définitivement pour vous et pour l'utilisateur."}
+            </p>
+            <div className="flex gap-3 justify-end pt-2">
+              <button
+                onClick={() => {
+                  setConfirmModalOpen(false);
+                  setDeleteTarget(null);
+                }}
+                className="px-4 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-[10.5px] font-bold rounded-xl transition cursor-pointer"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={async () => {
+                  if (deleteTarget.type === 'message') {
+                    if (onDeleteMessage) {
+                      await onDeleteMessage(deleteTarget.id);
+                    }
+                  } else {
+                    if (onDeleteChatSession) {
+                      await onDeleteChatSession(deleteTarget.id);
+                    }
+                  }
+                  setConfirmModalOpen(false);
+                  setDeleteTarget(null);
+                }}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-[10.5px] font-bold rounded-xl transition shadow active:scale-95 cursor-pointer"
+              >
+                Confirmer la suppression
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
