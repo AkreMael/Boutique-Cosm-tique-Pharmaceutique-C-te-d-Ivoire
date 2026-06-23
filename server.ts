@@ -1109,6 +1109,42 @@ Schémas attendu :
   }
 });
 
+// 5.5 Beauty Diagnostics History database endpoints
+app.post("/api/diagnostics", async (req, res) => {
+  const { userId, userName, userPhone, userCity, profile, result } = req.body;
+  try {
+    const newId = `diag-${Date.now()}`;
+    const diagnosticRecord = {
+      id: newId,
+      userId,
+      userName,
+      userPhone,
+      userCity,
+      gender: profile.gender,
+      age: profile.age,
+      skinType: profile.skinType,
+      hairType: profile.hairType,
+      concerns: profile.concerns || [],
+      result,
+      createdAt: new Date().toISOString()
+    };
+    await adminDb.collection("diagnostics").doc(newId).set(diagnosticRecord);
+    res.status(201).json(diagnosticRecord);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+app.get("/api/diagnostics", async (req, res) => {
+  try {
+    const snapshot = await adminDb.collection("diagnostics").orderBy("createdAt", "desc").get();
+    const list = snapshot.docs.map(doc => doc.data());
+    res.json(list);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
 // 6. Orders & Checkout API
 app.get("/api/orders", async (req, res) => {
   try {

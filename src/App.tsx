@@ -429,6 +429,20 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedUser)
       });
+
+      // 3. Save diagnostic record to diagnostics collection for admin real-time view
+      await fetch('/api/diagnostics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: currentUser.id,
+          userName: currentUser.name,
+          userPhone: currentUser.phone,
+          userCity: currentUser.city || '',
+          profile: profile,
+          result: diagnosticResult
+        })
+      });
     } catch (err) {
       console.error("Beauty profile sync error:", err);
     }
@@ -641,11 +655,35 @@ export default function App() {
             )}
 
             {activeTab === 'diagnostic' && (
-              <BeautyQuestionnaire
-                currentProfile={currentUser?.skinProfile}
-                products={products}
-                onSaveProfile={handleSaveBeautyProfile}
-              />
+              !currentUser ? (
+                <div className="max-w-md mx-auto my-12 p-8 bg-white border border-rose-100 rounded-[2rem] text-center space-y-6 shadow-xs animate-fade-in font-sans">
+                  <div className="h-16 w-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto text-rose-800">
+                    <Sparkles className="h-8 w-8 animate-pulse text-rose-700" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-extrabold text-rose-950">Diagnostic de peau Omi'i Institut</h3>
+                    <p className="text-xs text-zinc-500 leading-relaxed font-normal">
+                      Veuillez vous connecter ou créer un compte pour effectuer votre diagnostic de peau gratuit, obtenir des recommandations d'experts, et échanger en temps réel avec un pharmacien.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setPendingAction({ type: 'switch_tab', tab: 'diagnostic' });
+                      setShowLoginModal(true);
+                    }}
+                    className="w-full py-3 bg-rose-950 hover:bg-rose-900 text-white font-extrabold text-xs rounded-xl shadow-md transition cursor-pointer"
+                  >
+                    Se connecter / Créer mon compte client
+                  </button>
+                </div>
+              ) : (
+                <BeautyQuestionnaire
+                  currentProfile={currentUser?.skinProfile}
+                  products={products}
+                  onSaveProfile={handleSaveBeautyProfile}
+                  onGoHome={() => setActiveTab('home')}
+                />
+              )
             )}
 
             {activeTab === 'chat' && currentUser && (

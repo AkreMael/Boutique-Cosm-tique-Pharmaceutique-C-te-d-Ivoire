@@ -47,6 +47,11 @@ export default function AdminPanel({
   const [adminTab, setAdminTab] = useState<'stats' | 'orders' | 'products' | 'promos' | 'categories' | 'messages' | 'modules' | 'items' | 'users' | 'logs'>('stats');
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(true);
+  
+  // Custom states for beauty customer & diagnostics syncing
+  const [diagnosticsList, setDiagnosticsList] = useState<any[]>([]);
+  const [subTab, setSubTab] = useState<'all-users' | 'all-diagnostics'>('all-users');
+  const [activeChatUserId, setActiveChatUserId] = useState<string | undefined>(undefined);
 
   // SQL Connect custom administrator collections
   const [modules, setModules] = useState<Module[]>([]);
@@ -105,12 +110,22 @@ export default function AdminPanel({
       handleFirestoreError(err, OperationType.LIST, "activityLogs");
     });
 
+    // 6. Beauty Diagnostics
+    const unsubDiagnostics = onSnapshot(collection(db, "diagnostics"), (snap) => {
+      const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      list.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setDiagnosticsList(list);
+    }, (err) => {
+      console.error("Realtime Diagnostics Subscribe error in AdminPanel:", err);
+    });
+
     return () => {
       unsubModules();
       unsubItems();
       unsubUsers();
       unsubAccess();
       unsubLogs();
+      unsubDiagnostics();
     };
   }, []);
 
@@ -1396,83 +1411,201 @@ export default function AdminPanel({
           </div>
         )}
 
-        {/* ==================================== */}
-        {/* TAB 6.5: MANAGING CUSTOMERS & RITUELS */}
-        {/* ==================================== */}
         {adminTab === 'users' && (
           <div className="space-y-6 animate-fade-in text-xs font-sans">
             <div className="bg-white rounded-3xl p-6 border border-rose-100 shadow-sm">
               <h3 className="font-extrabold text-rose-950 text-sm mb-1">Fichiers Clients & Diagnostics Beauté</h3>
-              <p className="text-zinc-500 mb-4">Consultez la liste des clients enregistrés, leurs coordonnées (Nom, Ville, Téléphone) et l'historique de leur diagnostic de peau.</p>
+              <p className="text-zinc-500 mb-6">Consultez la liste des clients enregistrés, leurs coordonnées et l'historique en temps réel de tous les diagnostics de peau soumis.</p>
 
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-zinc-100">
-                  <thead>
-                    <tr className="text-left font-mono text-[10px] uppercase font-black tracking-wider text-zinc-400 bg-zinc-50 rounded-xl">
-                      <th className="py-3 px-4">Client</th>
-                      <th className="py-3 px-4">Contact & Ville</th>
-                      <th className="py-3 px-4">Diagnostic de Peau / Routines</th>
-                      <th className="py-3 px-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-100 bg-white">
-                    {users.filter(u => u.role !== 'admin').map((user) => {
-                      const profile = user.skinProfile;
-                      return (
-                        <tr key={user.id} className="hover:bg-zinc-50/50 transition">
+              {/* Real-time sync sub-tabs selection */}
+              <div className="flex space-x-2 border-b border-rose-100 pb-4 mb-6">
+                <button
+                  type="button"
+                  onClick={() => setSubTab('all-users')}
+                  className={`px-4 py-2 text-xs font-extrabold rounded-xl transition cursor-pointer ${
+                    subTab === 'all-users'
+                      ? 'bg-rose-950 text-white shadow-xs'
+                      : 'bg-zinc-50 hover:bg-zinc-100 text-zinc-650'
+                  }`}
+                >
+                  Fiches Clients enregistrés ({users.filter(u => u.role !== 'admin').length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSubTab('all-diagnostics')}
+                  className={`px-4 py-2 text-xs font-extrabold rounded-xl transition flex items-center space-x-2 cursor-pointer ${
+                    subTab === 'all-diagnostics'
+                      ? 'bg-rose-950 text-white shadow-xs'
+                      : 'bg-zinc-50 hover:bg-zinc-100 text-zinc-650'
+                  }`}
+                >
+                  <span>Diagnostics Soumis ({diagnosticsList.length})</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                </button>
+              </div>
+
+              {subTab === 'all-users' ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-zinc-100">
+                    <thead>
+                      <tr className="text-left font-mono text-[10px] uppercase font-black tracking-wider text-zinc-400 bg-zinc-50 rounded-xl">
+                        <th className="py-3 px-4">Client</th>
+                        <th className="py-3 px-4">Contact & Ville</th>
+                        <th className="py-3 px-4">Diagnostic de Peau / Routines</th>
+                        <th className="py-3 px-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-100 bg-white">
+                      {users.filter(u => u.role !== 'admin').map((user) => {
+                        const profile = user.skinProfile;
+                        return (
+                          <tr key={user.id} className="hover:bg-zinc-50/50 transition">
+                            <td className="py-4 px-4">
+                              <div className="flex items-center space-x-3">
+                                <div className="h-9 w-9 rounded-full bg-rose-50 text-rose-600 font-bold flex items-center justify-center border border-rose-100 shrink-0">
+                                  {user.name ? user.name.charAt(0).toUpperCase() : 'C'}
+                                </div>
+                                <div>
+                                  <p className="font-bold text-zinc-900 text-sm whitespace-nowrap">{user.name || 'Client de passage'}</p>
+                                  <p className="text-[10px] text-zinc-400 font-mono mt-0.5">{user.id}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-4 px-4 space-y-1">
+                              <div className="flex items-center space-x-1.5 text-zinc-700">
+                                <Smartphone className="h-3.5 w-3.5 text-zinc-400" />
+                                <span className="font-mono text-xs whitespace-nowrap">{user.phone}</span>
+                              </div>
+                              <div className="flex items-center space-x-1.5 text-zinc-500">
+                                <MapPin className="h-3.5 w-3.5 text-zinc-400" />
+                                <span>{user.city || 'Non spécifiée'}</span>
+                              </div>
+                              <p className="text-[10px] text-zinc-400 truncate max-w-[200px]" title={user.address}>{user.address}</p>
+                            </td>
+                            <td className="py-4 px-4">
+                              {profile ? (
+                                <div className="p-3 bg-rose-50/15 border border-rose-100/50 rounded-2xl max-w-sm space-y-2">
+                                  <div className="flex items-center justify-between gap-4">
+                                    <span className="font-extrabold text-rose-950 font-sans whitespace-nowrap">{profile.gender} • {profile.age} ans</span>
+                                    <span className="px-2 py-0.5 bg-rose-100 text-rose-900 font-black rounded text-[9px] uppercase tracking-wide whitespace-nowrap">{profile.skinType}</span>
+                                  </div>
+                                  <div className="text-[11px] text-zinc-650 leading-normal">
+                                    <span className="font-bold text-zinc-700">Cheveux & Cuir :</span> {profile.hairType}
+                                  </div>
+                                  <div className="flex flex-wrap gap-1">
+                                    {profile.concerns && profile.concerns.length > 0 ? (
+                                      profile.concerns.map((con) => (
+                                        <span key={con} className="px-2 py-0.5 bg-white border border-rose-100/70 text-[9px] text-rose-900 font-bold rounded whitespace-nowrap">
+                                          {con}
+                                        </span>
+                                      ))
+                                    ) : (
+                                      <span className="text-[10px] text-zinc-400 italic">Aucune préoccupation renseignée</span>
+                                    )}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex items-center space-x-1.5 text-zinc-400 italic">
+                                  <span>Aucun diagnostic de peau effectué</span>
+                                </div>
+                              )}
+                            </td>
+                            <td className="py-4 px-4 text-right">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActiveChatUserId(user.id);
+                                  setAdminTab('messages');
+                                }}
+                                className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 border border-rose-100 text-rose-900 font-bold rounded-lg transition whitespace-nowrap cursor-pointer"
+                              >
+                                Discuter / Précrire
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+
+                      {users.filter(u => u.role !== 'admin').length === 0 && (
+                        <tr>
+                          <td colSpan={4} className="text-center py-12 text-zinc-400">
+                            <span className="text-2xl">👤</span>
+                            <p className="text-xs font-bold mt-2 font-sans">Aucun client enregistré pour l'instant</p>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-zinc-100">
+                    <thead>
+                      <tr className="text-left font-mono text-[10px] uppercase font-black tracking-wider text-zinc-400 bg-zinc-50 rounded-xl">
+                        <th className="py-3 px-4">Client Soumissionnaire</th>
+                        <th className="py-3 px-4">Coordonnées</th>
+                        <th className="py-3 px-4">Diagnostic Profil & Réponses</th>
+                        <th className="py-3 px-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-100 bg-white">
+                      {diagnosticsList.map((diag) => (
+                        <tr key={diag.id} className="hover:bg-zinc-50/50 transition">
                           <td className="py-4 px-4">
                             <div className="flex items-center space-x-3">
-                              <div className="h-9 w-9 rounded-full bg-rose-50 text-rose-600 font-bold flex items-center justify-center border border-rose-100 shrink-0">
-                                {user.name ? user.name.charAt(0).toUpperCase() : 'C'}
+                              <div className="h-9 w-9 rounded-full bg-emerald-50 text-emerald-600 font-bold flex items-center justify-center border border-emerald-100 shrink-0">
+                                {diag.userName ? diag.userName.charAt(0).toUpperCase() : 'D'}
                               </div>
                               <div>
-                                <p className="font-bold text-zinc-900 text-sm whitespace-nowrap">{user.name || 'Client de passage'}</p>
-                                <p className="text-[10px] text-zinc-400 font-mono mt-0.5">{user.id}</p>
+                                <p className="font-bold text-zinc-900 text-sm whitespace-nowrap">{diag.userName || 'Client connecté'}</p>
+                                <p className="text-[9px] text-zinc-400 font-mono mt-0.5" title="User ID">UID: {diag.userId || 'N/A'}</p>
+                                <p className="text-[9px] text-zinc-450 font-mono mt-0.5" title="Date de soumission">Soumis le: {diag.createdAt ? new Date(diag.createdAt).toLocaleString('fr-FR') : 'N/A'}</p>
                               </div>
                             </div>
                           </td>
                           <td className="py-4 px-4 space-y-1">
                             <div className="flex items-center space-x-1.5 text-zinc-700">
                               <Smartphone className="h-3.5 w-3.5 text-zinc-400" />
-                              <span className="font-mono text-xs whitespace-nowrap">{user.phone}</span>
+                              <span className="font-mono text-xs whitespace-nowrap">{diag.userPhone || 'Non renseigné'}</span>
                             </div>
                             <div className="flex items-center space-x-1.5 text-zinc-500">
                               <MapPin className="h-3.5 w-3.5 text-zinc-400" />
-                              <span>{user.city || 'Non spécifiée'}</span>
+                              <span>{diag.userCity || 'Non spécifiée'}</span>
                             </div>
-                            <p className="text-[10px] text-zinc-400 truncate max-w-[200px]" title={user.address}>{user.address}</p>
                           </td>
                           <td className="py-4 px-4">
-                            {profile ? (
-                              <div className="p-3 bg-rose-50/15 border border-rose-100/50 rounded-2xl max-w-sm space-y-2">
-                                <div className="flex items-center justify-between gap-4">
-                                  <span className="font-extrabold text-rose-950 font-sans whitespace-nowrap">{profile.gender} • {profile.age} ans</span>
-                                  <span className="px-2 py-0.5 bg-rose-100 text-rose-900 font-black rounded text-[9px] uppercase tracking-wide whitespace-nowrap">{profile.skinType}</span>
-                                </div>
-                                <div className="text-[11px] text-zinc-650 leading-normal">
-                                  <span className="font-bold text-zinc-700">Cheveux & Cuir :</span> {profile.hairType}
-                                </div>
-                                <div className="flex flex-wrap gap-1">
-                                  {profile.concerns && profile.concerns.length > 0 ? (
-                                    profile.concerns.map((con) => (
-                                      <span key={con} className="px-2 py-0.5 bg-white border border-rose-100/70 text-[9px] text-rose-900 font-bold rounded whitespace-nowrap">
-                                        {con}
-                                      </span>
-                                    ))
-                                  ) : (
-                                    <span className="text-[10px] text-zinc-400 italic">Aucune préoccupation renseignée</span>
-                                  )}
-                                </div>
+                            <div className="p-3 bg-zinc-50/50 border border-zinc-150 rounded-2xl max-w-sm space-y-2">
+                              <div className="flex items-center justify-between gap-4">
+                                <span className="font-bold text-zinc-800 whitespace-nowrap">
+                                  {diag.gender} • {diag.age} ans
+                                </span>
+                                <span className="px-2 py-0.5 bg-rose-55 text-rose-950 font-black rounded text-[9px] uppercase tracking-wide whitespace-nowrap">
+                                  {diag.skinType}
+                                </span>
                               </div>
-                            ) : (
-                              <div className="flex items-center space-x-1.5 text-zinc-400 italic">
-                                <span>Aucun diagnostic de peau effectué</span>
+                              <div className="text-[11px] text-zinc-650 leading-normal">
+                                <span className="font-semibold text-zinc-500">Cheveux :</span> {diag.hairType}
                               </div>
-                            )}
+                              <div className="flex flex-wrap gap-1">
+                                {diag.concerns && diag.concerns.length > 0 ? (
+                                  diag.concerns.map((con: string) => (
+                                    <span key={con} className="px-2 py-0.5 bg-white border border-zinc-200 text-[9px] text-zinc-700 font-bold rounded whitespace-nowrap">
+                                      {con}
+                                    </span>
+                                  ))
+                                ) : (
+                                  <span className="text-[10px] text-zinc-400 italic">Aucune préoccupation</span>
+                                )}
+                              </div>
+                            </div>
                           </td>
                           <td className="py-4 px-4 text-right">
                             <button
+                              type="button"
                               onClick={() => {
+                                if (diag.userId) {
+                                  setActiveChatUserId(diag.userId);
+                                }
                                 setAdminTab('messages');
                               }}
                               className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 border border-rose-100 text-rose-900 font-bold rounded-lg transition whitespace-nowrap cursor-pointer"
@@ -1481,20 +1614,20 @@ export default function AdminPanel({
                             </button>
                           </td>
                         </tr>
-                      );
-                    })}
+                      ))}
 
-                    {users.filter(u => u.role !== 'admin').length === 0 && (
-                      <tr>
-                        <td colSpan={4} className="text-center py-12 text-zinc-400">
-                          <span className="text-2xl">👤</span>
-                          <p className="text-xs font-bold mt-2 font-sans">Aucun client enregistré pour l'instant</p>
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                      {diagnosticsList.length === 0 && (
+                        <tr>
+                          <td colSpan={4} className="text-center py-12 text-zinc-400">
+                            <span className="text-2xl">📋</span>
+                            <p className="text-xs font-bold mt-2 font-sans">Aucun diagnostic enregistré dans la base de données</p>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1518,6 +1651,8 @@ export default function AdminPanel({
                 onSendMessage={onSendMessage}
                 onSendPharmacistPrescription={onSendPharmacistPrescription}
                 onAddToCart={onAddToCart}
+                defaultSelectedChatId={activeChatUserId}
+                onSelectChatSession={(chatId) => setActiveChatUserId(chatId)}
               />
             </div>
           </div>

@@ -6,12 +6,14 @@ interface BeautyQuestionnaireProps {
   currentProfile?: BeautyProfile;
   products: Product[];
   onSaveProfile: (profile: BeautyProfile, diagnosticResult: any) => void;
+  onGoHome?: () => void;
 }
 
 export default function BeautyQuestionnaire({
   currentProfile,
   products,
-  onSaveProfile
+  onSaveProfile,
+  onGoHome
 }: BeautyQuestionnaireProps) {
   const [step, setStep] = useState(currentProfile ? 'result' : 'start');
   const [loading, setLoading] = useState(false);
@@ -21,6 +23,7 @@ export default function BeautyQuestionnaire({
   const [hairType, setHairType] = useState<'Crépu' | 'Frisé' | 'Bouclé' | 'Lisse' | 'Sec' | 'Gras'>('Crépu');
   const [concerns, setConcerns] = useState<string[]>([]);
   const [diagnosis, setDiagnosis] = useState<any>(null);
+  const [showConfirmationPopup, setShowConfirmationPopup] = useState(false);
 
   const CONCERNS_OPTIONS = [
     { value: 'Acné', label: 'Acné / Boutons', desc: 'Imperfections, excès de sébum' },
@@ -67,6 +70,7 @@ export default function BeautyQuestionnaire({
       setDiagnosis(data);
       onSaveProfile(profile, data);
       setStep('result');
+      setShowConfirmationPopup(true);
     } catch (err) {
       console.error(err);
       // Hard fallback
@@ -89,6 +93,7 @@ export default function BeautyQuestionnaire({
       setDiagnosis(defaultDiagnostic);
       onSaveProfile(profile, defaultDiagnostic);
       setStep('result');
+      setShowConfirmationPopup(true);
     } finally {
       setLoading(false);
     }
@@ -352,7 +357,7 @@ export default function BeautyQuestionnaire({
                   </>
                 ) : (
                   <>
-                    <span>Soumettre & Diagnostiquer</span>
+                    <span>Envoyer le diagnostic</span>
                     <ArrowRight className="h-4 w-4" />
                   </>
                 )}
@@ -519,6 +524,37 @@ export default function BeautyQuestionnaire({
         )}
 
       </div>
+
+      {showConfirmationPopup && (
+        <div id="diagnostic-success-popup" className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center font-sans">
+          <div className="fixed inset-0 bg-zinc-950/70 backdrop-blur-xs"></div>
+          <div className="bg-white rounded-[2rem] max-w-md w-full p-6 sm:p-8 relative z-55 shadow-2xl border border-rose-50 mx-4 text-center space-y-6">
+            <div className="mx-auto h-14 w-14 rounded-full bg-emerald-50 text-emerald-500 border border-emerald-100 flex items-center justify-center">
+              <Check className="h-6 w-6" />
+            </div>
+            
+            <div className="space-y-2">
+              <h3 className="text-lg font-extrabold text-rose-950">Diagnostic Envoyé</h3>
+              <p className="text-xs text-zinc-600 leading-relaxed font-normal">
+                Nous avons bien reçu votre diagnostic. Notre équipe l’examinera et vous répondra dans les plus brefs délais. Merci de rester disponible sur la plateforme afin que nous puissions vous accompagner au mieux.
+              </p>
+            </div>
+
+            <button
+              onClick={() => {
+                setShowConfirmationPopup(false);
+                if (onGoHome) {
+                  onGoHome();
+                }
+              }}
+              className="w-full py-3 bg-rose-950 hover:bg-rose-900 text-white font-extrabold text-xs rounded-xl tracking-wide shadow-md transition transform active:scale-95 cursor-pointer"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

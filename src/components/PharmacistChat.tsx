@@ -12,6 +12,7 @@ interface PharmacistChatProps {
   onSelectChatSession?: (chatId: string) => void;
   onSendPharmacistPrescription?: (chatId: string, productId: string) => void;
   onAddToCart?: (product: Product) => void;
+  defaultSelectedChatId?: string;
 }
 
 export default function PharmacistChat({
@@ -21,16 +22,25 @@ export default function PharmacistChat({
   chats,
   messages,
   onSendMessage,
+  onSelectChatSession,
   onSendPharmacistPrescription,
-  onAddToCart
+  onAddToCart,
+  defaultSelectedChatId
 }: PharmacistChatProps) {
   const [inputText, setInputText] = useState('');
-  const [selectedChatId, setSelectedChatId] = useState<string>(currentUser.id);
+  const [selectedChatId, setSelectedChatId] = useState<string>(defaultSelectedChatId || currentUser.id);
   const [isAiPharmacistEnabled, setIsAiPharmacistEnabled] = useState(true);
   const [sending, setSending] = useState(false);
   const [receiptImage, setReceiptImage] = useState<string | null>(null);
   
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Sync state if defaultSelectedChatId prop changes
+  useEffect(() => {
+    if (defaultSelectedChatId) {
+      setSelectedChatId(defaultSelectedChatId);
+    }
+  }, [defaultSelectedChatId]);
 
   // If role is client, chat is bound to currentUser.id. If admin, it selects the active session of the list
   useEffect(() => {
@@ -39,7 +49,7 @@ export default function PharmacistChat({
     } else if (currentUser.role === 'admin' && chats.length > 0 && selectedChatId === currentUser.id) {
       setSelectedChatId(chats[0].id);
     }
-  }, [currentUser, chats, selectedChatId]);
+  }, [currentUser, chats]);
 
   // Scroll to bottom of chat
   useEffect(() => {
@@ -135,7 +145,12 @@ export default function PharmacistChat({
               {chats.map((session) => (
                 <button
                   key={session.id}
-                  onClick={() => setSelectedChatId(session.id)}
+                  onClick={() => {
+                    setSelectedChatId(session.id);
+                    if (onSelectChatSession) {
+                      onSelectChatSession(session.id);
+                    }
+                  }}
                   className={`w-full p-3.5 rounded-2xl text-left border transition ${
                     selectedChatId === session.id
                       ? 'bg-rose-50/50 border-rose-250 text-rose-950 font-semibold shadow-xs'
