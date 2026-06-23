@@ -52,13 +52,29 @@ export default function PharmacistChat({
     }
   }, [currentUser, chats]);
 
+  const activeMessages = messages.filter((m) => m.chatId === selectedChatId && (m.sender === 'client' || m.sender === 'admin'));
+  const activeSessionDetails = chats.find((c) => c.id === selectedChatId);
+
+  // Track previous activeMessages length and selectedChatId to scroll only on intentional changes
+  const lastActiveMessagesLengthRef = useRef(activeMessages.length);
+  const lastSelectedChatIdRef = useRef(selectedChatId);
+  const lastMsgIdRef = useRef<string | null>(null);
+
   // Scroll to bottom of chat
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, selectedChatId]);
+    const lastMsg = activeMessages[activeMessages.length - 1];
+    const becameDifferentChat = lastSelectedChatIdRef.current !== selectedChatId;
+    const gotNewMessage = activeMessages.length > lastActiveMessagesLengthRef.current || (lastMsg && lastMsg.id !== lastMsgIdRef.current);
 
-  const activeMessages = messages.filter((m) => m.chatId === selectedChatId);
-  const activeSessionDetails = chats.find((c) => c.id === selectedChatId);
+    if (becameDifferentChat || gotNewMessage) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // Update refs to track current state
+    lastActiveMessagesLengthRef.current = activeMessages.length;
+    lastSelectedChatIdRef.current = selectedChatId;
+    lastMsgIdRef.current = lastMsg ? lastMsg.id : null;
+  }, [messages, selectedChatId, activeMessages]);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();

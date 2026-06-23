@@ -490,44 +490,75 @@ export default function App() {
     if (!currentUser) return;
     const senderRole = currentUser.role === 'client' ? 'client' : 'admin';
     const senderName = currentUser.name;
+    const msgId = `msg-${Date.now()}`;
 
+    const newChatMessage: ChatMessage = {
+      id: msgId,
+      chatId,
+      sender: senderRole,
+      senderName,
+      message: text,
+      timestamp: new Date().toISOString()
+    };
+
+    // 1. Instant optimistic local write to Firestore (visible to snapshots instantly)
     try {
-      await fetch(`/api/chats/${chatId}/messages`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sender: senderRole,
-          senderName,
-          message: text
-        })
-      });
+      await setDoc(doc(db, "messages", msgId), newChatMessage);
     } catch (err) {
-      console.error("Chat sync failed, appending message client-side fallback", err);
-      // Fallback local append back to Firestore messages directly
-      const fallbackMsgId = `msg-${Date.now()}`;
-      await setDoc(doc(db, "messages", fallbackMsgId), {
-        id: fallbackMsgId,
-        chatId,
+      console.error("Direct message write failed, using API sync only", err);
+    }
+
+    // 2. Async Express sync in the background
+    fetch(`/api/chats/${chatId}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: msgId,
         sender: senderRole,
         senderName,
-        message: text,
-        timestamp: new Date().toISOString()
-      });
-    }
+        message: text
+      })
+    }).catch(err => {
+      console.error("Express synchronization failed in background:", err);
+    });
   };
 
   // Dispatch product recommendations in-chat
   const handleSendPharmacistPrescription = async (chatId: string, productId: string) => {
     if (!currentUser) return;
-    await fetch(`/api/chats/${chatId}/messages`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const msgId = `msg-${Date.now()}`;
+    const recommendationText = "Je vous recommande vivement d'intégrer ce produit cosmétique dans votre routine beauté quotidienne.";
+    
+    const newChatMessage: ChatMessage = {
+      id: msgId,
+      chatId,
+      sender: "admin",
+      senderName: currentUser.name,
+      message: recommendationText,
+      timestamp: new Date().toISOString(),
+      suggestedProductIds: [productId]
+    };
+
+    // 1. Instant optimistic local write to Firestore (visible to snapshots instantly)
+    try {
+      await setDoc(doc(db, "messages", msgId), newChatMessage);
+    } catch (err) {
+      console.error("Direct prescription write failed, using API sync only", err);
+    }
+
+    // 2. Async Express sync in the background
+    fetch(`/api/chats/${chatId}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        sender: 'admin',
+        id: msgId,
+        sender: "admin",
         senderName: currentUser.name,
-        message: "Je vous recommande vivement d'intégrer ce produit cosmétique dans votre routine beauté quotidienne.",
+        message: recommendationText,
         suggestedProductIds: [productId]
       })
+    }).catch(err => {
+      console.error("Express prescription synchronization failed in background:", err);
     });
   };
 
@@ -1014,26 +1045,82 @@ export default function App() {
                     <div className="p-3 bg-rose-50/30 border border-rose-100 rounded-2xl text-[10px] text-zinc-650 leading-relaxed">
                       <p className="font-bold text-rose-900 mb-1 flex items-center gap-1.5">
                         <Sparkles className="h-3.5 w-3.5 text-rose-500" />
-                        <span>Omi'i Institut Conseillère IA</span>
+                        <span>Omi'i Institut - Service Conseil</span>
                       </p>
-                      Posez-moi vos questions ! Mon diagnostic s'améliore si vous décrivez votre type de peau ou routine dans votre espace profil.
+                      Bienvenue dans votre équipe conseil Omi'i Institut. Posez toutes vos questions à notre équipe pour obtenir des routines et articles adaptés !
                     </div>
-
-                    {messages.filter(m => m.chatId === currentUser.id).length === 0 && (
+ 
+                    {messages.filter(m => m.chatId === currentUser.id && (m.sender === 'client' || m.sender === 'admin')).length === 0 && (
                       <div className="text-center py-6 text-[10px] text-zinc-400">
                         Aucun message précédent. Lancez la discussion !
                       </div>
                     )}
-
-                    {messages.filter(m => m.chatId === currentUser.id).map((msg) => {
+ 
+                    {messages.filter(m => m.chatId === currentUser.id && (m.sender === 'client' || m.sender === 'admin')).map((msg) => {
                       const isMe = msg.sender === 'client';
                       return (
-                        <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+                        <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} w-full`}>
                           <div className={`max-w-[85%] rounded-2xl p-3 text-[11px] leading-relaxed shadow-xs ${
                             isMe ? 'bg-rose-950 text-white rounded-tr-none' : 'bg-white border border-zinc-150 text-zinc-800 rounded-tl-none'
                           }`}>
                             <p className="font-semibold text-[8px] opacity-75 mb-0.5 capitalize">{msg.senderName}</p>
                             <p className="whitespace-pre-line font-normal text-xs leading-relaxed">{msg.message}</p>
+
+                            {/* Prescribed products suggestions inserted in chat */}
+                            {msg.suggestedProductIds && msg.suggestedProductIds.length > 0 && (
+                              <div className="mt-3 pt-3 border-t border-zinc-150 space-y-2">
+                                <p className="text-[9px] uppercase tracking-wide font-extrabold text-rose-600">Recommandations de soins :</p>
+                                {msg.suggestedProductIds.map((pId) => {
+                                  const pObj = products.find((p) => p.id === pId);
+                                  if (!pObj) return null;
+                                  return (
+                                    <div 
+                                      key={pId} 
+                                      onClick={() => setSelectedProduct(pObj)}
+                                      className="p-2 bg-zinc-50 hover:bg-zinc-100 text-zinc-800 rounded-xl flex flex-col gap-2 border border-zinc-200 shadow-xs transition cursor-pointer group text-left mt-2"
+                                    >
+                                      <div className="flex gap-2 items-center">
+                                        <img 
+                                          src={pObj.images?.[0] || 'https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=150&auto=format&fit=crop'} 
+                                          alt={pObj.name} 
+                                          className="h-10 w-10 object-cover rounded-lg shrink-0 border border-zinc-100" 
+                                        />
+                                        <div className="min-w-0 flex-1">
+                                          <h4 className="font-bold text-[10px] text-rose-950 group-hover:text-rose-700 transition-colors line-clamp-1">{pObj.name}</h4>
+                                          <p className="text-[8px] text-zinc-455 font-medium">{pObj.brand} • {pObj.category}</p>
+                                        </div>
+                                      </div>
+                                      {pObj.description && (
+                                        <p className="text-[9px] text-zinc-500 line-clamp-2 leading-relaxed">{pObj.description}</p>
+                                      )}
+                                      <div className="flex items-center justify-between mt-1 gap-1.5 pt-1.5 border-t border-zinc-150">
+                                        <p className="text-[10px] font-black text-rose-800">
+                                          {pObj.promoPrice ? (
+                                            <span className="flex items-center gap-1">
+                                              <span>{pObj.promoPrice} CFA</span>
+                                              <span className="text-[8px] text-zinc-400 line-through font-normal">{pObj.price} CFA</span>
+                                            </span>
+                                          ) : (
+                                            <span>{pObj.price} CFA</span>
+                                          )}
+                                        </p>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleAddToCart(pObj);
+                                          }}
+                                          className="px-2 py-1 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-[9px] rounded-md flex items-center space-x-1 cursor-pointer transition"
+                                        >
+                                          <ShoppingBag className="h-2.5 w-2.5" />
+                                          <span>Ajouter</span>
+                                        </button>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+
                           </div>
                         </div>
                       );

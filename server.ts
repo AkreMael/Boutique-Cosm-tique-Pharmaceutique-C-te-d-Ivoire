@@ -884,11 +884,11 @@ app.get("/api/chats/:chatId/messages", async (req, res) => {
 
 app.post("/api/chats/:chatId/messages", async (req, res) => {
   const { chatId } = req.params;
-  const { sender, senderName, message, imageUrl, suggestedProductIds } = req.body;
+  const { id, sender, senderName, message, imageUrl, suggestedProductIds } = req.body;
   
   try {
     // 1. Add User message
-    const msgId = `msg-${Date.now()}`;
+    const msgId = id || `msg-${Date.now()}`;
     const userMsg = {
       id: msgId,
       chatId,
