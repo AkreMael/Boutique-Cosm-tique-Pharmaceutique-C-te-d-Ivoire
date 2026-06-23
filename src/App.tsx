@@ -13,7 +13,7 @@ import CartScreen from './components/CartScreen';
 import ProfileScreen from './components/ProfileScreen';
 import { Product, Category, User, CartItem, Order, ChatSession, ChatMessage, BeautyProfile } from './types';
 import { HeartPulse, Plus, Check, Star, X, Shield, Info, ShoppingBag, MessageSquare, Send, Sparkles, Home as HomeIcon, Grid3X3, BadgePercent, ShoppingCart as BottomCartIcon, User as UserIcon } from 'lucide-react';
-import { db, collection, doc, onSnapshot, setDoc, query, where, authenticateAnonymous } from './lib/firebase';
+import { db, collection, doc, onSnapshot, setDoc, query, where, authenticateAnonymous, handleFirestoreError, OperationType } from './lib/firebase';
 
 export default function App() {
   // Navigation tabs - Default with home (Accueil) per full-UI overhaul guidelines
@@ -120,7 +120,10 @@ export default function App() {
     const unsubProducts = onSnapshot(collection(db, "products"), (snap) => {
       const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
       setProducts(list);
-    }, (err) => console.error("Realtime Products Subscribe error:", err));
+    }, (err) => {
+      console.error("Realtime Products Subscribe error:", err);
+      handleFirestoreError(err, OperationType.LIST, "products");
+    });
 
     // 2) Subscribe to Categories Collection (Public Read allowed)
     const unsubCategories = onSnapshot(collection(db, "categories"), (snap) => {
@@ -132,7 +135,10 @@ export default function App() {
         } as Category;
       });
       setCategories(list);
-    }, (err) => console.error("Realtime Categories Subscribe error:", err));
+    }, (err) => {
+      console.error("Realtime Categories Subscribe error:", err);
+      handleFirestoreError(err, OperationType.LIST, "categories");
+    });
 
     let unsubMessages = () => {};
     let unsubUsers = () => {};
@@ -145,14 +151,20 @@ export default function App() {
         const list = snap.docs.map(doc => doc.data() as ChatMessage);
         list.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
         setMessages(list);
-      }, (err) => console.error("Realtime Messages Subscribe error:", err));
+      }, (err) => {
+        console.error("Realtime Messages Subscribe error:", err);
+        handleFirestoreError(err, OperationType.LIST, "messages");
+      });
 
       // 4) Subscribe to Users Collection (Admin only)
       if (currentUser.role === 'admin') {
         unsubUsers = onSnapshot(collection(db, "users"), (snap) => {
           const list = snap.docs.map(doc => doc.data() as User);
           setUsers(list);
-        }, (err) => console.error("Realtime Users Subscribe error:", err));
+        }, (err) => {
+          console.error("Realtime Users Subscribe error:", err);
+          handleFirestoreError(err, OperationType.LIST, "users");
+        });
       }
 
       // 5) Subscribe to Orders Collection (Real-time updates)
@@ -165,7 +177,10 @@ export default function App() {
         const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
         list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         setOrders(list);
-      }, (err) => console.error("Realtime Orders Subscribe error:", err));
+      }, (err) => {
+        console.error("Realtime Orders Subscribe error:", err);
+        handleFirestoreError(err, OperationType.LIST, "orders");
+      });
 
       // 6) Subscribe to Chats Collection (Real-time updates)
       const chatsRef = collection(db, "chats");
@@ -176,7 +191,10 @@ export default function App() {
       unsubChats = onSnapshot(chatsQuery, (snap) => {
         const list = snap.docs.map(doc => doc.data() as ChatSession);
         setChats(list);
-      }, (err) => console.error("Realtime Chats Subscribe error:", err));
+      }, (err) => {
+        console.error("Realtime Chats Subscribe error:", err);
+        handleFirestoreError(err, OperationType.LIST, "chats");
+      });
     }
 
     return () => {

@@ -9,7 +9,7 @@ import {
 } from 'recharts';
 import { Product, Order, ChatSession, User as AppUser, AdminStats, Category, ChatMessage, Module, Item, UserModuleAccess, ActivityLog } from '../types';
 import PharmacistChat from './PharmacistChat';
-import { collection, onSnapshot, doc, updateDoc, deleteDoc, addDoc, getDocs, db, query, where } from '../lib/firebase';
+import { collection, onSnapshot, doc, updateDoc, deleteDoc, addDoc, getDocs, db, query, where, handleFirestoreError, OperationType } from '../lib/firebase';
 
 interface AdminPanelProps {
   products: Product[];
@@ -63,24 +63,36 @@ export default function AdminPanel({
     const unsubModules = onSnapshot(collection(db, "modules"), (snap) => {
       const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Module));
       setModules(list);
+    }, (err) => {
+      console.error("Realtime Modules Subscribe error:", err);
+      handleFirestoreError(err, OperationType.LIST, "modules");
     });
 
     // 2. Items
     const unsubItems = onSnapshot(collection(db, "items"), (snap) => {
       const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Item));
       setItems(list);
+    }, (err) => {
+      console.error("Realtime Items Subscribe error:", err);
+      handleFirestoreError(err, OperationType.LIST, "items");
     });
 
     // 3. All Users
     const unsubUsers = onSnapshot(collection(db, "users"), (snap) => {
       const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser));
       setAllUsers(list);
+    }, (err) => {
+      console.error("Realtime Users Subscribe error:", err);
+      handleFirestoreError(err, OperationType.LIST, "users");
     });
 
     // 4. Access rights
     const unsubAccess = onSnapshot(collection(db, "userModuleAccess"), (snap) => {
       const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserModuleAccess));
       setModuleAccess(list);
+    }, (err) => {
+      console.error("Realtime Access Subscribe error:", err);
+      handleFirestoreError(err, OperationType.LIST, "userModuleAccess");
     });
 
     // 5. Activity Logs
@@ -88,6 +100,9 @@ export default function AdminPanel({
       const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ActivityLog));
       list.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       setActivityLogs(list);
+    }, (err) => {
+      console.error("Realtime Logs Subscribe error:", err);
+      handleFirestoreError(err, OperationType.LIST, "activityLogs");
     });
 
     return () => {
