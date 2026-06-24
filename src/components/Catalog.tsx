@@ -33,6 +33,7 @@ export default function Catalog({
     const brand = p.brand || '';
     const desc = p.description || '';
     const category = p.category || '';
+    const categoryId = p.categoryId || '';
 
     const matchesSearch = name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -40,6 +41,7 @@ export default function Catalog({
                            
     const matchesCategory = selectedCategory === 'tous' || 
                             category === selectedCategory ||
+                            categoryId === selectedCategory ||
                             (selectedCategory === 'promotions' && p.promoPrice !== undefined);
 
     const matchesBrand = selectedBrand === 'toutes' || brand === selectedBrand;
