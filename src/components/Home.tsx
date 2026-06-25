@@ -78,6 +78,29 @@ export default function Home({
     .slice(0, 6);
 
   // Helper round category icons matching slugs
+  const getCategoryFallbackImage = (slug: string) => {
+    switch (slug) {
+      case 'produits-cosmetiques':
+        return "https://images.unsplash.com/photo-1608248597481-496100c8c836?q=80&w=400&auto=format&fit=crop";
+      case 'produits-pharmaceutiques-sante':
+        return "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?q=80&w=400&auto=format&fit=crop";
+      case 'soins-capillaires':
+        return "https://images.unsplash.com/photo-1527799863830-de7f4067c29d?q=80&w=400&auto=format&fit=crop";
+      case 'hygiene-beaute':
+        return "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=400&auto=format&fit=crop";
+      case 'produits-pour-bebe':
+        return "https://images.unsplash.com/photo-1515488042361-404e9250afef?q=80&w=400&auto=format&fit=crop";
+      case 'produits-alimentaires-consommation':
+        return "https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=400&auto=format&fit=crop";
+      case 'produits-naturels-bio':
+        return "https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=80&w=400&auto=format&fit=crop";
+      case 'materiel-accessoires':
+        return "https://images.unsplash.com/photo-1596462502278-27bfdc403348?q=80&w=400&auto=format&fit=crop";
+      default:
+        return "https://images.unsplash.com/photo-1608248597481-496100c8c836?q=80&w=400&auto=format&fit=crop";
+    }
+  };
+
   const getCategoryIconEmoji = (slug: string) => {
     switch (slug) {
       case 'cremes-soins': return '🧴';
@@ -195,7 +218,7 @@ export default function Home({
         <div className="flex items-center justify-between">
           <h4 className="text-sm font-black text-zinc-950 uppercase tracking-wider flex items-center gap-1.5">
             <span className="w-1.5 h-4 bg-rose-500 rounded-full"></span>
-            Sélections beauté rapides
+            Catégories disponibles
           </h4>
           <button 
             onClick={() => onSwitchTab('categories')}
@@ -206,17 +229,22 @@ export default function Home({
         </div>
 
         <div className="grid grid-cols-4 gap-3 sm:gap-6 overflow-x-auto pb-1">
-          {categories.map((cat) => (
+          {categories.filter(c => !c.parentSlug && c.slug !== 'tous').map((cat) => (
             <button
               key={cat.slug}
               onClick={() => onSwitchTab('categories', cat.slug)}
               className="flex flex-col items-center p-3 bg-zinc-50 hover:bg-rose-50/40 rounded-2xl border border-zinc-100 hover:border-rose-150 transition group cursor-pointer text-center"
             >
-              <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-white flex items-center justify-center text-xl sm:text-2.5xl shadow-xs border border-zinc-100 group-hover:scale-105 transition-all">
-                {getCategoryIconEmoji(cat.slug)}
+              <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-white overflow-hidden flex items-center justify-center shadow-xs border border-zinc-100 group-hover:scale-105 transition-all">
+                <img
+                  referrerPolicy="no-referrer"
+                  src={cat.imageUrl || cat.image || getCategoryFallbackImage(cat.slug)}
+                  alt={cat.name}
+                  className="h-full w-full object-cover"
+                />
               </div>
-              <span className="text-[10px] sm:text-xs font-bold text-zinc-800 group-hover:text-rose-600 mt-2.5 truncate max-w-full">
-                {cat.name.split(' ')[0]} {cat.name.split(' ')[1] || ''}
+              <span className="text-[10px] sm:text-xs font-bold text-zinc-800 group-hover:text-rose-600 mt-2 line-clamp-2 max-w-full h-8 flex items-center justify-center">
+                {cat.name}
               </span>
             </button>
           ))}
