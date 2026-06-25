@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Sparkles, MessageSquare, ShoppingBag, Plus, BookOpen, User, CheckCheck, Compass, Info, Trash2 } from 'lucide-react';
+import { Send, Sparkles, MessageSquare, ShoppingBag, Plus, BookOpen, User, CheckCheck, Compass, Info, Trash2, Loader2 } from 'lucide-react';
 import { ChatMessage, ChatSession, Product, User as AppUser, BeautyProfile } from '../types';
 
 interface PharmacistChatProps {
@@ -352,9 +352,13 @@ export default function PharmacistChat({
             <button
               type="submit"
               disabled={sending || (!inputText.trim() && !receiptImage)}
-              className="p-3 bg-rose-950 hover:bg-rose-900 border border-rose-950 text-white rounded-xl disabled:opacity-50 transition-transform cursor-pointer shadow active:scale-95 shrink-0"
+              className="p-3 bg-rose-950 hover:bg-rose-900 border border-rose-950 text-white rounded-xl disabled:opacity-50 transition-transform cursor-pointer shadow active:scale-95 shrink-0 flex items-center justify-center"
             >
-              <Send className="h-4.5 w-4.5" />
+              {sending ? (
+                <Loader2 className="h-4.5 w-4.5 animate-spin" />
+              ) : (
+                <Send className="h-4.5 w-4.5" />
+              )}
             </button>
           </form>
 

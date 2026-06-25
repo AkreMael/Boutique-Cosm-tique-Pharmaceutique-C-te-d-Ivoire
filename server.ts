@@ -693,6 +693,10 @@ app.put("/api/products/:id", async (req, res) => {
       Number(req.body.promoPrice) <= 0
     ) {
       delete updatedProduct.promoPrice;
+      delete updatedProduct.discountRate;
+      delete updatedProduct.isOnSale;
+      delete updatedProduct.promoPercentage;
+      delete updatedProduct.discount;
     } else {
       updatedProduct.promoPrice = Number(req.body.promoPrice);
     }

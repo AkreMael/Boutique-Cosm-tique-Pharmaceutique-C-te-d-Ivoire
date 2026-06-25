@@ -688,18 +688,50 @@ export default function App() {
   const handleUpdateProduct = async (updatedProd: Product) => {
     // 1. Instantly write to Firestore client-side for instant sync across all users
     try {
-      await setDoc(doc(db, "products", updatedProd.id), updatedProd);
-      console.log("Directly updated product in Firestore:", updatedProd.id);
+      const cleanProd = { ...updatedProd };
+
+      // Clean up promotional fields if they are unset/removed
+      if (cleanProd.promoPrice === undefined || cleanProd.promoPrice === null || cleanProd.promoPrice <= 0) {
+        delete cleanProd.promoPrice;
+        delete (cleanProd as any).discountRate;
+        delete (cleanProd as any).isOnSale;
+        delete (cleanProd as any).promoPercentage;
+        delete (cleanProd as any).discount;
+      }
+
+      // Remove undefined properties to avoid Firestore errors
+      Object.keys(cleanProd).forEach((key) => {
+        if (cleanProd[key as keyof Product] === undefined) {
+          delete cleanProd[key as keyof Product];
+        }
+      });
+
+      await setDoc(doc(db, "products", cleanProd.id), cleanProd);
+      console.log("Directly updated product in Firestore:", cleanProd.id);
     } catch (err) {
       console.error("Direct Firestore product update failed:", err);
     }
 
     // 2. Parallel backup sync to backend database
     try {
+      const cleanPayload = { ...updatedProd };
+      if (cleanPayload.promoPrice === undefined || cleanPayload.promoPrice === null || cleanPayload.promoPrice <= 0) {
+        delete cleanPayload.promoPrice;
+        delete (cleanPayload as any).discountRate;
+        delete (cleanPayload as any).isOnSale;
+        delete (cleanPayload as any).promoPercentage;
+        delete (cleanPayload as any).discount;
+      }
+      Object.keys(cleanPayload).forEach((key) => {
+        if (cleanPayload[key as keyof Product] === undefined) {
+          delete cleanPayload[key as keyof Product];
+        }
+      });
+
       await fetch(`/api/products/${updatedProd.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedProd)
+        body: JSON.stringify(cleanPayload)
       });
     } catch (err) {
       console.error("Express update product sync failed:", err);

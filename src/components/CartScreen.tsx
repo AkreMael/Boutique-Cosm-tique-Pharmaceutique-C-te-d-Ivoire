@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ShoppingCart, Plus, Minus, Trash2, CheckCircle2, ChevronRight, Truck, Mail, Phone, MapPin, User as UserIcon, Check, X, Smartphone } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Trash2, CheckCircle2, ChevronRight, Truck, Mail, Phone, MapPin, User as UserIcon, Check, X, Smartphone, Loader2 } from 'lucide-react';
 import { CartItem, Product, Order, User as AppUser } from '../types';
 import { db, doc, setDoc } from '../lib/firebase';
 
@@ -691,9 +691,16 @@ export default function CartScreen({
                     <button
                       type="submit"
                       disabled={loading}
-                      className="flex-1 py-3.5 bg-rose-500 hover:bg-rose-600 disabled:opacity-40 text-white font-black text-xs rounded-xl shadow-md cursor-pointer transition uppercase"
+                      className="flex-1 py-3.5 bg-rose-500 hover:bg-rose-600 disabled:opacity-40 text-white font-black text-xs rounded-xl shadow-md cursor-pointer transition uppercase flex items-center justify-center gap-2"
                     >
-                      {loading ? 'Filiation en cours...' : 'Confirmer Ma Commande (CFA)'}
+                      {loading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>Filiation en cours...</span>
+                        </>
+                      ) : (
+                        <span>Confirmer Ma Commande (CFA)</span>
+                      )}
                     </button>
                   </div>
 

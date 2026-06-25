@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Sparkles, User, Smartphone, MapPin, KeyRound, ArrowRight, ShieldCheck, Heart } from 'lucide-react';
+import { Sparkles, User, Smartphone, MapPin, KeyRound, ArrowRight, ShieldCheck, Heart, Loader2 } from 'lucide-react';
 import { User as AppUser } from '../types';
 
 interface LoginScreenProps {
@@ -11,6 +11,7 @@ interface LoginScreenProps {
 export default function LoginScreen({ onLogin, isModal = false }: LoginScreenProps) {
   const [activeTab, setActiveTab] = useState<'client' | 'admin'>('client');
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   // Client forms
   const [clientName, setClientName] = useState('');
@@ -45,54 +46,62 @@ export default function LoginScreen({ onLogin, isModal = false }: LoginScreenPro
 
     const targetNum = "0705052632";
 
-    if (
-      (normalName === "mael" || normalName === "maël") &&
-      normalCity === "cocody" &&
-      normalNum === targetNum
-    ) {
-      const adminUser: AppUser = {
-        id: 'usr-admin-mael',
-        name: 'Maël',
-        phone: '07 05 05 26 32',
-        email: 'mael@cosmetiques.ci',
-        city: 'Cocody',
-        address: 'Cocody, Abidjan',
-        role: 'admin'
+    setLoading(true);
+
+    setTimeout(() => {
+      if (
+        (normalName === "mael" || normalName === "maël") &&
+        normalCity === "cocody" &&
+        normalNum === targetNum
+      ) {
+        const adminUser: AppUser = {
+          id: 'usr-admin-mael',
+          name: 'Maël',
+          phone: '07 05 05 26 32',
+          email: 'mael@cosmetiques.ci',
+          city: 'Cocody',
+          address: 'Cocody, Abidjan',
+          role: 'admin'
+        };
+        onLogin(adminUser);
+        setLoading(false);
+        return;
+      }
+
+      // Normal client phone checks
+      const digitsOnly = clientPhone.replace(/\+225/g, '').replace(/\s+/g, '');
+      if (digitsOnly.length !== 10 || isNaN(Number(digitsOnly))) {
+        setError("Format incorrect. Le numéro de téléphone doit être de 10 chiffres (ex: +225 0700000000).");
+        setLoading(false);
+        return;
+      }
+
+      if (!clientPhone.startsWith('+225')) {
+        setError("L'indicatif +225 de la Côte d'Ivoire est obligatoire.");
+        setLoading(false);
+        return;
+      }
+
+      const normalizedPhone = `+225${digitsOnly}`;
+
+      // Dynamically derive username under-the-hood to match the exact 3 fields specified
+      const derivedUsername = clientName.trim().toLowerCase().replace(/[^a-z0-9]/g, '') + Math.floor(100 + Math.random() * 900);
+
+      // Creating the client user structure
+      const appUser: AppUser = {
+        id: `usr-client-${Date.now()}`,
+        name: clientName.trim(),
+        username: derivedUsername,
+        phone: normalizedPhone,
+        email: `${derivedUsername}@cosmetiques.ci`,
+        city: clientCity.trim(),
+        address: `${clientCity.trim()}, Côte d'Ivoire`,
+        role: 'client'
       };
-      onLogin(adminUser);
-      return;
-    }
 
-    // Normal client phone checks
-    const digitsOnly = clientPhone.replace(/\+225/g, '').replace(/\s+/g, '');
-    if (digitsOnly.length !== 10 || isNaN(Number(digitsOnly))) {
-      setError("Format incorrect. Le numéro de téléphone doit être de 10 chiffres (ex: +225 0700000000).");
-      return;
-    }
-
-    if (!clientPhone.startsWith('+225')) {
-      setError("L'indicatif +225 de la Côte d'Ivoire est obligatoire.");
-      return;
-    }
-
-    const normalizedPhone = `+225${digitsOnly}`;
-
-    // Dynamically derive username under-the-hood to match the exact 3 fields specified
-    const derivedUsername = clientName.trim().toLowerCase().replace(/[^a-z0-9]/g, '') + Math.floor(100 + Math.random() * 900);
-
-    // Creating the client user structure
-    const appUser: AppUser = {
-      id: `usr-client-${Date.now()}`,
-      name: clientName.trim(),
-      username: derivedUsername,
-      phone: normalizedPhone,
-      email: `${derivedUsername}@cosmetiques.ci`,
-      city: clientCity.trim(),
-      address: `${clientCity.trim()}, Côte d'Ivoire`,
-      role: 'client'
-    };
-
-    onLogin(appUser);
+      onLogin(appUser);
+      setLoading(false);
+    }, 1000);
   };
 
   const handleAdminSubmit = (e: React.FormEvent) => {
@@ -107,24 +116,30 @@ export default function LoginScreen({ onLogin, isModal = false }: LoginScreenPro
     const targetNum = "0705052632";
     const targetNumWithPrefix = "+2250705052632";
 
-    if (
-      normalName === "mael" &&
-      normalCity === "cocody" &&
-      (normalNum === targetNum || normalNum === targetNumWithPrefix || normalNum === "0705052632")
-    ) {
-      const adminUser: AppUser = {
-        id: 'usr-admin-mael',
-        name: 'Maël',
-        phone: '07 05 05 26 32',
-        email: 'mael@cosmetiques.ci',
-        city: 'Cocody',
-        address: 'Cocody, Abidjan',
-        role: 'admin'
-      };
-      onLogin(adminUser);
-    } else {
-      setError("Informations d'identification administrateur incorrectes. Accès refusé.");
-    }
+    setLoading(true);
+
+    setTimeout(() => {
+      if (
+        normalName === "mael" &&
+        normalCity === "cocody" &&
+        (normalNum === targetNum || normalNum === targetNumWithPrefix || normalNum === "0705052632")
+      ) {
+        const adminUser: AppUser = {
+          id: 'usr-admin-mael',
+          name: 'Maël',
+          phone: '07 05 05 26 32',
+          email: 'mael@cosmetiques.ci',
+          city: 'Cocody',
+          address: 'Cocody, Abidjan',
+          role: 'admin'
+        };
+        onLogin(adminUser);
+        setLoading(false);
+      } else {
+        setError("Informations d'identification administrateur incorrectes. Accès refusé.");
+        setLoading(false);
+      }
+    }, 1000);
   };
 
   const formContent = (
@@ -245,10 +260,20 @@ export default function LoginScreen({ onLogin, isModal = false }: LoginScreenPro
 
           <button
             type="submit"
-            className="w-full py-4 bg-rose-950 hover:bg-rose-900 border border-rose-950 text-white font-extrabold text-xs rounded-xl flex items-center justify-center space-x-2 transition shadow active:scale-95 cursor-pointer mt-6"
+            disabled={loading}
+            className="w-full py-4 bg-rose-950 hover:bg-rose-900 border border-rose-950 text-white font-extrabold text-xs rounded-xl flex items-center justify-center space-x-2 transition shadow active:scale-95 cursor-pointer mt-6 disabled:opacity-50"
           >
-            <span>Entrer sur la Boutique</span>
-            <ArrowRight className="h-4 w-4" />
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Connexion en cours...</span>
+              </>
+            ) : (
+              <>
+                <span>Entrer sur la Boutique</span>
+                <ArrowRight className="h-4 w-4" />
+              </>
+            )}
           </button>
         </form>
       ) : (
@@ -310,10 +335,20 @@ export default function LoginScreen({ onLogin, isModal = false }: LoginScreenPro
 
           <button
             type="submit"
-            className="w-full py-4 bg-zinc-950 hover:bg-zinc-900 border border-zinc-950 text-white font-extrabold text-xs rounded-xl flex items-center justify-center space-x-2 transition shadow active:scale-95 cursor-pointer mt-6"
+            disabled={loading}
+            className="w-full py-4 bg-zinc-950 hover:bg-zinc-900 border border-zinc-950 text-white font-extrabold text-xs rounded-xl flex items-center justify-center space-x-2 transition shadow active:scale-95 cursor-pointer mt-6 disabled:opacity-50"
           >
-            <span>Déverrouiller le Pupitre</span>
-            <ShieldCheck className="h-4 w-4" />
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Déverrouillage en cours...</span>
+              </>
+            ) : (
+              <>
+                <span>Déverrouiller le Pupitre</span>
+                <ShieldCheck className="h-4 w-4" />
+              </>
+            )}
           </button>
         </form>
       )}

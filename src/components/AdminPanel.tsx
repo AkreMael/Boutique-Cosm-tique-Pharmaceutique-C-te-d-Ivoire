@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   TrendingUp, Coins, Users, ShoppingBag, Plus, Trash2, Edit, Check, Eye, X, 
   RotateCw, AlertCircle, ShieldAlert, Sparkles, CheckCircle2, Truck, Ban, CheckCheck,
-  FolderOpen, MessageSquare, Globe, ToggleLeft, ToggleRight, List, Shield, History, MapPin, Smartphone
+  FolderOpen, MessageSquare, Globe, ToggleLeft, ToggleRight, List, Shield, History, MapPin, Smartphone, Loader2
 } from 'lucide-react';
 import { 
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
@@ -262,6 +262,8 @@ export default function AdminPanel({
   const [prodImg, setProdImg] = useState('https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=600&auto=format&fit=crop');
   const [prodCat, setProdCat] = useState('soins-peau');
   const [prodBrand, setProdBrand] = useState('PharmaPure CI');
+  const [isSubmittingProduct, setIsSubmittingProduct] = useState(false);
+  const [isSubmittingCategory, setIsSubmittingCategory] = useState(false);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
 
 
@@ -320,6 +322,7 @@ export default function AdminPanel({
       icon: editCategory.icon || 'Sparkles'
     };
 
+    setIsSubmittingCategory(true);
     try {
       // 1. Direct write to Firestore for instant real-time synchronization across clients
       await setDoc(doc(db, "categories", editCategory.slug), updatedCategoryData);
@@ -337,6 +340,8 @@ export default function AdminPanel({
     } catch (err: any) {
       console.error("Erreur de mise à jour de catégorie:", err);
       setCatError(`Une erreur est survenue lors de la mise à jour: ${err.message || err}`);
+    } finally {
+      setIsSubmittingCategory(false);
     }
   };
 
@@ -377,6 +382,7 @@ export default function AdminPanel({
       icon: 'Sparkles'
     };
 
+    setIsSubmittingCategory(true);
     try {
       // 1. Direct write to Firestore for instant real-time synchronization
       await setDoc(doc(db, "categories", generatedSlug), newCategoryData);
@@ -396,6 +402,8 @@ export default function AdminPanel({
     } catch (err: any) {
       console.error("Erreur d'ajout de catégorie:", err);
       setCatError(`Une erreur est survenue lors de l'ajout: ${err.message || err}`);
+    } finally {
+      setIsSubmittingCategory(false);
     }
   };
 
@@ -465,49 +473,56 @@ export default function AdminPanel({
     fetchStats();
   }, [orders, products]);
 
-  const handleProductSubmit = (e: React.FormEvent) => {
+  const handleProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editProduct) {
-      onUpdateProduct({
-        ...editProduct,
-        name: prodName,
-        description: prodDesc,
-        price: prodPrice,
-        promoPrice: prodPromo || undefined,
-        stock: prodStock,
-        images: [prodImg],
-        category: prodCat,
-        categoryId: prodCat,
-        brand: prodBrand,
-        isAvailable: prodStock > 0,
-        isActive: prodStock > 0
-      });
-    } else {
-      onAddProduct({
-        name: prodName,
-        description: prodDesc,
-        price: prodPrice,
-        promoPrice: prodPromo || undefined,
-        stock: prodStock,
-        images: [prodImg],
-        category: prodCat,
-        categoryId: prodCat,
-        brand: prodBrand,
-        isAvailable: prodStock > 0,
-        isActive: prodStock > 0,
-        createdAt: new Date().toISOString()
-      });
+    setIsSubmittingProduct(true);
+    try {
+      if (editProduct) {
+        await onUpdateProduct({
+          ...editProduct,
+          name: prodName,
+          description: prodDesc,
+          price: prodPrice,
+          promoPrice: prodPromo || undefined,
+          stock: prodStock,
+          images: [prodImg],
+          category: prodCat,
+          categoryId: prodCat,
+          brand: prodBrand,
+          isAvailable: prodStock > 0,
+          isActive: prodStock > 0
+        });
+      } else {
+        await onAddProduct({
+          name: prodName,
+          description: prodDesc,
+          price: prodPrice,
+          promoPrice: prodPromo || undefined,
+          stock: prodStock,
+          images: [prodImg],
+          category: prodCat,
+          categoryId: prodCat,
+          brand: prodBrand,
+          isAvailable: prodStock > 0,
+          isActive: prodStock > 0,
+          createdAt: new Date().toISOString()
+        });
+      }
+      
+      // reset form
+      setEditProduct(null);
+      setProdName('');
+      setProdDesc('');
+      setProdPrice(5000);
+      setProdPromo(undefined);
+      setProdStock(20);
+      setProdCat('soins-peau');
+      setShowProductModal(false);
+    } catch (err) {
+      console.error("Error submitting product:", err);
+    } finally {
+      setIsSubmittingProduct(false);
     }
-    
-    // reset form
-    setEditProduct(null);
-    setProdName('');
-    setProdDesc('');
-    setProdPrice(5000);
-    setProdPromo(undefined);
-    setProdStock(20);
-    setProdCat('soins-peau');
-    setShowProductModal(false);
   };
 
   const handleOpenEditProduct = (p: Product) => {
@@ -1276,9 +1291,17 @@ export default function AdminPanel({
                         </button>
                         <button
                           type="submit"
-                          className="px-4 py-2.5 bg-rose-950 hover:bg-rose-900 text-white font-bold rounded-xl"
+                          disabled={isSubmittingProduct}
+                          className="px-4 py-2.5 bg-rose-950 hover:bg-rose-900 text-white font-bold rounded-xl flex items-center justify-center gap-1.5 disabled:opacity-50"
                         >
-                          {editProduct ? 'Sauvegarder' : 'Ajouter le produit'}
+                          {isSubmittingProduct ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin text-white" />
+                              <span>Enregistrement...</span>
+                            </>
+                          ) : (
+                            <span>{editProduct ? 'Sauvegarder' : 'Ajouter le produit'}</span>
+                          )}
                         </button>
                       </div>
                     </form>
@@ -1354,8 +1377,9 @@ export default function AdminPanel({
                         <button
                           type="button"
                           onClick={() => {
+                            const { promoPrice, discountRate, isOnSale, promoPercentage, discount, ...rest } = p as any;
                             onUpdateProduct({
-                              ...p,
+                              ...rest,
                               promoPrice: undefined
                             });
                           }}
@@ -1500,10 +1524,20 @@ export default function AdminPanel({
                 <div className="md:col-span-2 flex justify-end pt-2">
                   <button
                     type="submit"
-                    className="px-6 py-3 bg-rose-950 hover:bg-rose-900 text-white font-bold rounded-xl flex items-center space-x-2 shadow-sm cursor-pointer"
+                    disabled={isSubmittingCategory}
+                    className="px-6 py-3 bg-rose-950 hover:bg-rose-900 text-white font-bold rounded-xl flex items-center space-x-2 shadow-sm cursor-pointer disabled:opacity-50"
                   >
-                    <Plus className="h-4 w-4" />
-                    <span>Créer la catégorie</span>
+                    {isSubmittingCategory ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin text-white" />
+                        <span>Création...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="h-4 w-4" />
+                        <span>Créer la catégorie</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </form>
@@ -1694,9 +1728,17 @@ export default function AdminPanel({
                         </button>
                         <button
                           type="submit"
-                          className="px-6 py-2.5 bg-rose-950 hover:bg-rose-900 text-white font-bold rounded-xl transition shadow-sm"
+                          disabled={isSubmittingCategory}
+                          className="px-6 py-2.5 bg-rose-950 hover:bg-rose-900 text-white font-bold rounded-xl transition shadow-sm flex items-center justify-center gap-1.5 disabled:opacity-50"
                         >
-                          Sauvegarder
+                          {isSubmittingCategory ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin text-white" />
+                              <span>Sauvegarde...</span>
+                            </>
+                          ) : (
+                            <span>Sauvegarder</span>
+                          )}
                         </button>
                       </div>
                     </form>
