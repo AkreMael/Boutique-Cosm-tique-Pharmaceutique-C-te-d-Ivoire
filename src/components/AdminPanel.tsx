@@ -277,6 +277,7 @@ export default function AdminPanel({
   const [catSlugInput, setCatSlugInput] = useState('');
   const [catDescInput, setCatDescInput] = useState('');
   const [catImageUrlInput, setCatImageUrlInput] = useState('');
+  const [catParentSlugInput, setCatParentSlugInput] = useState('');
   const [catError, setCatError] = useState('');
   const [catSuccess, setCatSuccess] = useState('');
 
@@ -286,12 +287,14 @@ export default function AdminPanel({
   const [editCatName, setEditCatName] = useState('');
   const [editCatDesc, setEditCatDesc] = useState('');
   const [editCatImageUrl, setEditCatImageUrl] = useState('');
+  const [editCatParentSlug, setEditCatParentSlug] = useState('');
 
   const handleOpenEditCategory = (cat: Category) => {
     setEditCategory(cat);
     setEditCatName(cat.name);
     setEditCatDesc(cat.description || '');
     setEditCatImageUrl(cat.imageUrl || cat.image || '');
+    setEditCatParentSlug((cat as any).parentSlug || '');
     setShowCategoryEditModal(true);
   };
 
@@ -319,7 +322,8 @@ export default function AdminPanel({
       description: editCatDesc.trim(),
       imageUrl: editCatImageUrl.trim(),
       image: editCatImageUrl.trim(),
-      icon: editCategory.icon || 'Sparkles'
+      icon: editCategory.icon || 'Sparkles',
+      parentSlug: editCatParentSlug || null
     };
 
     setIsSubmittingCategory(true);
@@ -379,7 +383,8 @@ export default function AdminPanel({
       description: catDescInput.trim(),
       imageUrl: catImageUrlInput.trim(),
       image: catImageUrlInput.trim(),
-      icon: 'Sparkles'
+      icon: 'Sparkles',
+      parentSlug: catParentSlugInput || null
     };
 
     setIsSubmittingCategory(true);
@@ -399,6 +404,7 @@ export default function AdminPanel({
       setCatSlugInput('');
       setCatDescInput('');
       setCatImageUrlInput('');
+      setCatParentSlugInput('');
     } catch (err: any) {
       console.error("Erreur d'ajout de catégorie:", err);
       setCatError(`Une erreur est survenue lors de l'ajout: ${err.message || err}`);
@@ -1053,7 +1059,9 @@ export default function AdminPanel({
                           <p className="truncate text-sm" title={p.name}>{p.name}</p>
                           <p className="text-[10px] text-zinc-400 font-normal truncate mt-0.5">{p.description}</p>
                         </td>
-                        <td className="py-3 px-6 font-mono capitalize">{(p.category || p.categoryId || '').replace('-', ' ')}</td>
+                        <td className="py-3 px-6 font-semibold text-zinc-800">
+                          {categories.find(c => c.slug === (p.category || p.categoryId))?.name || (p.category || p.categoryId || '').replace('-', ' ')}
+                        </td>
                         <td className="py-3 px-6">{p.brand}</td>
                         <td className="py-3 px-6 text-right font-extrabold text-rose-800">
                           {p.promoPrice ? (
@@ -1196,9 +1204,21 @@ export default function AdminPanel({
                           onChange={(e) => setProdCat(e.target.value)}
                           className="w-full p-3 bg-zinc-50 border border-zinc-200 rounded-xl"
                         >
-                          {categories.map((category) => (
-                            <option key={category.slug} value={category.slug}>{category.name}</option>
-                          ))}
+                          {categories.filter(c => !c.parentSlug && c.slug !== 'tous').map((mainCat) => {
+                            const subCats = categories.filter(sub => sub.parentSlug === mainCat.slug);
+                            return (
+                              <React.Fragment key={mainCat.slug}>
+                                <option value={mainCat.slug} className="font-semibold text-rose-950">
+                                  {mainCat.name}
+                                </option>
+                                {subCats.map((subCat) => (
+                                  <option key={subCat.slug} value={subCat.slug}>
+                                    &nbsp;&nbsp;&nbsp;&nbsp;↳ {subCat.name}
+                                  </option>
+                                ))}
+                              </React.Fragment>
+                            );
+                          })}
                         </select>
                       </div>
 
@@ -1445,6 +1465,20 @@ export default function AdminPanel({
                   />
                 </div>
 
+                <div className="md:col-span-2">
+                  <label className="block text-zinc-700 font-bold mb-1.5">Catégorie parente (Optionnel - pour créer une sous-catégorie)</label>
+                  <select
+                    value={catParentSlugInput}
+                    onChange={(e) => setCatParentSlugInput(e.target.value)}
+                    className="w-full p-3 bg-zinc-50 border border-zinc-200 rounded-xl"
+                  >
+                    <option value="">-- Aucune (C'est une catégorie principale) --</option>
+                    {categories.filter(c => !c.parentSlug && c.slug !== 'tous').map((category) => (
+                      <option key={category.slug} value={category.slug}>{category.name}</option>
+                    ))}
+                  </select>
+                </div>
+
                 <div className="md:col-span-2 border-t border-rose-50 pt-4">
                   <label className="block text-rose-950 font-extrabold mb-2 text-sm">Image de la catégorie *</label>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1562,8 +1596,18 @@ export default function AdminPanel({
                             <FolderOpen className="h-5 w-5" />
                           </div>
                           <div>
-                            <h4 className="font-extrabold text-zinc-900 text-sm leading-tight">{cat.name}</h4>
-                            <p className="font-mono text-[9px] text-rose-500 font-semibold">{cat.slug}</p>
+                            <h4 className="font-extrabold text-zinc-900 text-sm leading-tight">
+                              {cat.parentSlug && <span className="text-rose-500 mr-1 text-[11px] font-black">↳</span>}
+                              {cat.name}
+                            </h4>
+                            <div className="flex flex-wrap gap-1.5 mt-0.5 items-center">
+                              <span className="font-mono text-[8px] text-zinc-400 font-semibold">{cat.slug}</span>
+                              {cat.parentSlug && (
+                                <span className="bg-rose-50 text-rose-600 text-[8px] px-1.5 py-0.5 rounded-full font-bold">
+                                  Sous-catégorie de : {categories.find(c => c.slug === cat.parentSlug)?.name || cat.parentSlug}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                         <p className="text-zinc-500 leading-relaxed min-h-[36px]">{cat.description || "Aucune description renseignée."}</p>
@@ -1641,6 +1685,20 @@ export default function AdminPanel({
                           placeholder="Description de la catégorie..."
                           className="w-full p-3 bg-zinc-50 border border-zinc-200 rounded-xl"
                         />
+                      </div>
+
+                      <div>
+                        <label className="block text-zinc-700 font-bold mb-1">Catégorie parente (Optionnel - pour créer une sous-catégorie)</label>
+                        <select
+                          value={editCatParentSlug}
+                          onChange={(e) => setEditCatParentSlug(e.target.value)}
+                          className="w-full p-3 bg-zinc-50 border border-zinc-200 rounded-xl"
+                        >
+                          <option value="">-- Aucune (C'est une catégorie principale) --</option>
+                          {categories.filter(c => !c.parentSlug && c.slug !== 'tous' && c.slug !== editCategory.slug).map((category) => (
+                            <option key={category.slug} value={category.slug}>{category.name}</option>
+                          ))}
+                        </select>
                       </div>
 
                       <div>

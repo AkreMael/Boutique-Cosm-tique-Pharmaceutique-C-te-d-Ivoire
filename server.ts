@@ -474,10 +474,14 @@ const SEED_PRODUCTS = [
 ];
 
 const SEED_CATEGORIES = [
-  { slug: "soins-peau", name: "Produits pharmaceutiques / soins de peau", description: "Produits contre les taches, anti-acné, éclaircissants, hydratants et soins correcteurs de teint", iconName: "Shield" },
-  { slug: "cremes-soins", name: "Crèmes et soins visage / corps", description: "Crèmes visage, crèmes corps, soins hydratants d'excellence et soins réparateurs", iconName: "Sparkles" },
-  { slug: "pommades-traitements", name: "Pommades et traitements", description: "Pommades pour le teint, correctrices, soins harmonieux unifiés et dermatologie douce", iconName: "Droplet" },
-  { slug: "produits-capillaires", name: "Produits capillaires", description: "Shampoings, après-shampoings, huiles et soins anti-chute ou croissance", iconName: "Wind" }
+  { slug: "produits-cosmetiques", name: "Produits cosmétiques", description: "Crèmes visage, laits corporels, gels douche, savons, gommages, sérums, huiles corporelles, déodorants, parfums", iconName: "Sparkles" },
+  { slug: "produits-pharmaceutiques-sante", name: "Produits pharmaceutiques / santé", description: "Médicaments, compléments alimentaires, produits de premiers soins, pansements, antiseptiques, thermomètres, vitamines, produits de santé générale", iconName: "Shield" },
+  { slug: "soins-capillaires", name: "Soins capillaires", description: "Shampoings, après-shampoings, huiles pour cheveux, crèmes capillaires, masques capillaires, produits pour boucles, produits anti-chute, colorations", iconName: "Wind" },
+  { slug: "hygiene-beaute", name: "Hygiène & beauté", description: "Dentifrices, brosses à dents, bain de bouche, serviettes hygiéniques, lingettes, coton, rasoirs, mousses à raser", iconName: "Heart" },
+  { slug: "produits-pour-bebe", name: "Produits pour bébé", description: "Laits pour bébé, couches, lingettes bébé, huiles bébé, crèmes bébé, savons bébé, accessoires bébé", iconName: "Smile" },
+  { slug: "produits-alimentaires-consommation", name: "Produits alimentaires / consommation", description: "Boissons, conserves, snacks, riz / pâtes / céréales, huiles alimentaires, produits surgelés, épices, sucre / farine / lait", iconName: "ShoppingBag" },
+  { slug: "produits-naturels-bio", name: "Produits naturels / bio", description: "Huiles naturelles, beurres naturels, poudres naturelles, produits à base de cacao, produits à base de karité, produits bio", iconName: "Leaf" },
+  { slug: "materiel-accessoires", name: "Matériel / accessoires", description: "Accessoires beauté, accessoires cheveux, trousses, gants, miroirs, petits équipements", iconName: "Grid" }
 ];
 
 const SEED_USERS = [
@@ -554,11 +558,9 @@ async function initDatabase() {
     }
 
     const categoriesSnapshot = await adminDb.collection("categories").get();
-    if (categoriesSnapshot.empty) {
-      console.log("Seeding Firestore categories...");
-      for (const cat of SEED_CATEGORIES) {
-        await adminDb.collection("categories").doc(cat.slug).set(cat);
-      }
+    console.log("Ensuring core categories are seeded in Firestore...");
+    for (const cat of SEED_CATEGORIES) {
+      await adminDb.collection("categories").doc(cat.slug).set(cat);
     }
 
     const usersSnapshot = await adminDb.collection("users").get();
@@ -739,7 +741,7 @@ app.get("/api/categories", async (req, res) => {
 
 app.post("/api/categories", async (req, res) => {
   try {
-    const { slug, name, description, icon, imageUrl, image } = req.body;
+    const { slug, name, description, icon, imageUrl, image, parentSlug } = req.body;
     if (!slug || !name) {
       return res.status(400).json({ error: "Slug and Name are required" });
     }
@@ -749,7 +751,8 @@ app.post("/api/categories", async (req, res) => {
       description: description || "", 
       icon: icon || "Sparkles",
       imageUrl: imageUrl || "",
-      image: image || imageUrl || ""
+      image: image || imageUrl || "",
+      parentSlug: parentSlug || null
     };
     await adminDb.collection("categories").doc(slug).set(newCategory);
     res.status(201).json(newCategory);

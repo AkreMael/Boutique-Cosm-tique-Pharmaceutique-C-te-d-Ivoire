@@ -43,10 +43,12 @@ export default function CategoriesGrid({
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'default' | 'price-asc' | 'price-desc'>('default');
   const [addedProductId, setAddedProductId] = useState<string | null>(null);
+  const [selectedSubCategorySlug, setSelectedSubCategorySlug] = useState<string | 'all'>('all');
 
   // Sync state if preselected slug shifts from outside search or quick buttons
   useEffect(() => {
     setActiveCategory(preselectedCategorySlug);
+    setSelectedSubCategorySlug('all');
   }, [preselectedCategorySlug]);
 
   const handleAddToCartWithNotify = (product: Product) => {
@@ -56,12 +58,30 @@ export default function CategoriesGrid({
   };
 
   const getProductCount = (categorySlug: string) => {
-    return products.filter((p) => p.category === categorySlug || p.categoryId === categorySlug).length;
+    return products.filter((p) => {
+      const isDirectMatch = p.category === categorySlug || p.categoryId === categorySlug;
+      if (isDirectMatch) return true;
+      const prodCatObj = categories.find((c) => c.slug === p.category || c.slug === p.categoryId);
+      if (prodCatObj && prodCatObj.parentSlug === categorySlug) return true;
+      return false;
+    }).length;
   };
 
   // Filter products by selected category + search query + sort rules
   const filteredProducts = products.filter((p) => {
-    const matchesCategory = activeCategory === 'tous' || p.category === activeCategory || p.categoryId === activeCategory;
+    let matchesCategory = false;
+    if (activeCategory === 'tous') {
+      matchesCategory = true;
+    } else {
+      if (selectedSubCategorySlug === 'all') {
+        const isDirectMatch = p.category === activeCategory || p.categoryId === activeCategory;
+        const prodCatObj = categories.find((c) => c.slug === p.category || c.slug === p.categoryId);
+        const isSubMatch = prodCatObj && prodCatObj.parentSlug === activeCategory;
+        matchesCategory = isDirectMatch || !!isSubMatch;
+      } else {
+        matchesCategory = p.category === selectedSubCategorySlug || p.categoryId === selectedSubCategorySlug;
+      }
+    }
     const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           p.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           p.description.toLowerCase().includes(searchQuery.toLowerCase());
@@ -115,7 +135,7 @@ export default function CategoriesGrid({
       {activeCategory === 'tous' ? (
         <div className="px-4 py-8 max-w-7xl mx-auto space-y-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {categories.map((cat) => {
+            {categories.filter(c => !c.parentSlug && c.slug !== 'tous').map((cat) => {
               const count = getProductCount(cat.slug);
               const customCover = cat.imageUrl || cat.image || CATEGORY_VISUALS[cat.slug]?.image || "https://images.unsplash.com/photo-1608248597481-496100c8c836?q=80&w=400&auto=format&fit=crop";
               const emoji = CATEGORY_VISUALS[cat.slug]?.emoji || "🎀";
@@ -259,6 +279,39 @@ export default function CategoriesGrid({
               </select>
             </div>
           </div>
+
+          {/* Sub-categories Chips */}
+          {categories.filter(c => c.parentSlug === activeCategory).length > 0 && (
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+              <span className="text-[10px] uppercase tracking-wider font-extrabold text-zinc-400 select-none mr-2">Rayons :</span>
+              <button
+                onClick={() => setSelectedSubCategorySlug('all')}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition cursor-pointer shrink-0 border ${
+                  selectedSubCategorySlug === 'all'
+                    ? 'bg-rose-950 border-rose-950 text-white shadow-xs'
+                    : 'bg-zinc-50 border-zinc-200 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900'
+                }`}
+              >
+                Tout afficher
+              </button>
+              {categories.filter(c => c.parentSlug === activeCategory).map((sub) => {
+                const subCount = products.filter((p) => p.category === sub.slug || p.categoryId === sub.slug).length;
+                return (
+                  <button
+                    key={sub.slug}
+                    onClick={() => setSelectedSubCategorySlug(sub.slug)}
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition cursor-pointer shrink-0 border ${
+                      selectedSubCategorySlug === sub.slug
+                        ? 'bg-rose-950 border-rose-950 text-white shadow-xs'
+                        : 'bg-zinc-50 border-zinc-200 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900'
+                    }`}
+                  >
+                    {sub.name} <span className="opacity-60 text-[10px] ml-0.5">({subCount})</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           {/* Results feedback */}
           <div className="text-xs text-zinc-500 font-mono flex justify-between items-center px-1">

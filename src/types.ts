@@ -25,6 +25,7 @@ export interface Category {
   icon?: string;
   imageUrl?: string;
   image?: string;
+  parentSlug?: string | null;
 }
 
 export type UserRole = 'client' | 'admin' | 'pharmacist' | 'agent';
