@@ -85,9 +85,12 @@ export default function OffersScreen({
                     >
                       <img
                         referrerPolicy="no-referrer"
-                        src={p.images[0]}
+                        src={p.images?.[0] || "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=600&auto=format&fit=crop"}
                         alt={p.name}
                         className="h-full w-full object-cover group-hover:scale-105 transition duration-500"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=600&auto=format&fit=crop";
+                        }}
                       />
                     </div>
 

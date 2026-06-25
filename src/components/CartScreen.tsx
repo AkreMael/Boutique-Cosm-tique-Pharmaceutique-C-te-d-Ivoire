@@ -172,7 +172,7 @@ export default function CartScreen({
         name: item.product.name,
         price: item.product.promoPrice ? item.product.promoPrice : item.product.price,
         quantity: item.quantity,
-        image: item.product.images[0]
+        image: item.product.images?.[0] || "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=600&auto=format&fit=crop"
       })),
       total: totalCost,
       status: 'En attente' as const,
@@ -351,9 +351,12 @@ export default function CartScreen({
                           <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-xl overflow-hidden bg-zinc-50 shrink-0 border border-rose-50">
                             <img
                               referrerPolicy="no-referrer"
-                              src={item.product.images[0]}
+                              src={item.product.images?.[0] || "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=600&auto=format&fit=crop"}
                               alt={item.product.name}
                               className="h-full w-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=600&auto=format&fit=crop";
+                              }}
                             />
                           </div>
 

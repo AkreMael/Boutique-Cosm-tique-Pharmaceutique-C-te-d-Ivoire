@@ -89,7 +89,7 @@ export default function Cart({
         name: item.product.name,
         price: item.product.promoPrice ? item.product.promoPrice : item.product.price,
         quantity: item.product.stock > 0 ? Math.min(item.product.stock, item.quantity) : item.quantity,
-        image: item.product.images[0]
+        image: item.product.images?.[0] || "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=600&auto=format&fit=crop"
       })),
       total: totalCost,
       paymentMethod: `${operator} Money` as any
@@ -123,7 +123,7 @@ export default function Cart({
           name: item.product.name,
           price: item.product.promoPrice ? item.product.promoPrice : item.product.price,
           quantity: item.quantity,
-          image: item.product.images[0]
+          image: item.product.images?.[0] || "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=600&auto=format&fit=crop"
         })),
         total: totalCost,
         status: 'En attente',
@@ -190,9 +190,13 @@ export default function Cart({
                       return (
                         <div key={item.product.id} className="flex space-x-4 p-3.5 rounded-2xl bg-zinc-50 border border-zinc-150 relative">
                           <img 
-                            src={item.product.images[0]} 
+                            src={item.product.images?.[0] || "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=600&auto=format&fit=crop"} 
                             alt={item.product.name} 
                             className="h-16 w-16 object-cover rounded-xl border border-rose-100"
+                            referrerPolicy="no-referrer"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=600&auto=format&fit=crop";
+                            }}
                           />
                           <div className="flex-1 min-w-0 pr-4">
                             <h4 className="text-xs font-bold text-rose-950 truncate leading-snug">{item.product.name}</h4>

@@ -75,6 +75,8 @@ export default function LoginScreen({ onLogin, isModal = false }: LoginScreenPro
       return;
     }
 
+    const normalizedPhone = `+225${digitsOnly}`;
+
     // Dynamically derive username under-the-hood to match the exact 3 fields specified
     const derivedUsername = clientName.trim().toLowerCase().replace(/[^a-z0-9]/g, '') + Math.floor(100 + Math.random() * 900);
 
@@ -83,7 +85,7 @@ export default function LoginScreen({ onLogin, isModal = false }: LoginScreenPro
       id: `usr-client-${Date.now()}`,
       name: clientName.trim(),
       username: derivedUsername,
-      phone: clientPhone.trim(),
+      phone: normalizedPhone,
       email: `${derivedUsername}@cosmetiques.ci`,
       city: clientCity.trim(),
       address: `${clientCity.trim()}, Côte d'Ivoire`,

@@ -373,7 +373,15 @@ export default function PharmacistChat({
               <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
                 {products.map((prod) => (
                   <div key={prod.id} className="p-3 bg-zinc-50 border border-zinc-150 rounded-xl flex items-center justify-between gap-2.5">
-                    <img src={prod.images[0]} alt={prod.name} className="h-9 w-9 object-cover rounded-xl shrink-0 border border-zinc-200" />
+                    <img 
+                      src={prod.images?.[0] || "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=200&auto=format&fit=crop"} 
+                      alt={prod.name} 
+                      className="h-9 w-9 object-cover rounded-xl shrink-0 border border-zinc-200" 
+                      referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=200&auto=format&fit=crop";
+                      }}
+                    />
                     <div className="flex-1 min-w-0">
                       <p className="text-[11px] font-bold text-rose-950 truncate">{prod.name}</p>
                       <p className="text-[9px] text-zinc-400 mt-0.5">{prod.promoPrice ? prod.promoPrice : prod.price} CFA • Stock: {prod.stock}</p>

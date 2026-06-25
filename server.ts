@@ -614,12 +614,24 @@ app.get("/api/products", async (req, res) => {
 
 app.post("/api/products", async (req, res) => {
   try {
-    const id = `prod-${Date.now()}`;
+    const id = req.body.id || `prod-${Date.now()}`;
     const newProduct = {
       ...req.body,
       id,
       dateAdded: new Date().toISOString()
     };
+
+    // Ensure category and categoryId fields are synchronized
+    if (newProduct.category && !newProduct.categoryId) {
+      newProduct.categoryId = newProduct.category;
+    } else if (newProduct.categoryId && !newProduct.category) {
+      newProduct.category = newProduct.categoryId;
+    }
+
+    // Enforce that images is always a non-empty array with a valid URL or fallback
+    if (!newProduct.images || !Array.isArray(newProduct.images) || newProduct.images.length === 0 || !newProduct.images[0]) {
+      newProduct.images = ["https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=600&auto=format&fit=crop"];
+    }
 
     // Cast fields to their proper types
     if (newProduct.price) newProduct.price = Number(newProduct.price);
@@ -660,6 +672,18 @@ app.put("/api/products/:id", async (req, res) => {
       ...currentData,
       ...req.body
     };
+
+    // Ensure category and categoryId fields are synchronized
+    if (updatedProduct.category && !updatedProduct.categoryId) {
+      updatedProduct.categoryId = updatedProduct.category;
+    } else if (updatedProduct.categoryId && !updatedProduct.category) {
+      updatedProduct.category = updatedProduct.categoryId;
+    }
+
+    // Enforce that images is always a non-empty array with a valid URL or fallback
+    if (!updatedProduct.images || !Array.isArray(updatedProduct.images) || updatedProduct.images.length === 0 || !updatedProduct.images[0]) {
+      updatedProduct.images = ["https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=600&auto=format&fit=crop"];
+    }
 
     // If promoPrice is null, undefined, empty string or <= 0, remove it from the document
     if (
@@ -785,9 +809,25 @@ app.post("/api/users/login", async (req, res) => {
     }
 
     // Client Lookup / Auto registration in Firestore
-    const usersSnap = await adminDb.collection("users").where("phone", "==", phone.trim()).get();
-    if (!usersSnap.empty) {
-      const existingUser = { id: usersSnap.docs[0].id, ...usersSnap.docs[0].data() };
+    const cleanDigits = phone.replace(/[^\d]/g, "");
+    const digits10 = cleanDigits.slice(-10);
+    const normalizedPhone = `+225${digits10}`;
+
+    const searchPhones = [phone.trim(), normalizedPhone];
+    const spaceLess = phone.replace(/\s+/g, "");
+    if (!searchPhones.includes(spaceLess)) searchPhones.push(spaceLess);
+
+    let existingUserDoc: any = null;
+    for (const p of searchPhones) {
+      const usersSnap = await adminDb.collection("users").where("phone", "==", p).get();
+      if (!usersSnap.empty) {
+        existingUserDoc = usersSnap.docs[0];
+        break;
+      }
+    }
+
+    if (existingUserDoc) {
+      const existingUser = { id: existingUserDoc.id, ...existingUserDoc.data() };
       return res.json(existingUser);
     }
 
@@ -796,7 +836,7 @@ app.post("/api/users/login", async (req, res) => {
       id: newClientId,
       name: name.trim(),
       username: username ? username.trim() : name.toLowerCase().replace(/\s+/g, ""),
-      phone: phone.trim(),
+      phone: normalizedPhone,
       email: `${(username || name).trim().toLowerCase()}@cosmetiques.ci`,
       city: city || "Abidjan",
       address: `${city || "Abidjan"}, Côte d'Ivoire`,

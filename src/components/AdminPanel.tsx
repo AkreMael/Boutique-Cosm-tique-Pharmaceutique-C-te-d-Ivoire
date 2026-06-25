@@ -11,6 +11,50 @@ import { Product, Order, ChatSession, User as AppUser, AdminStats, Category, Cha
 import PharmacistChat from './PharmacistChat';
 import { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, addDoc, getDocs, db, query, where, handleFirestoreError, OperationType } from '../lib/firebase';
 
+// Helper to compress and convert images to high-compatibility Base64 JPEG/WEBP
+export function compressImage(file: File, maxWidth = 800, maxHeight = 800, quality = 0.75): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(event.target?.result as string);
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        // Standardize output to highly compressed JPEG
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = (err) => resolve(event.target?.result as string);
+    };
+    reader.onerror = (err) => resolve('');
+  });
+}
+
 interface AdminPanelProps {
   products: Product[];
   orders: Order[];
@@ -356,9 +400,17 @@ export default function AdminPanel({
   };
 
   const handleDeleteCategory = async (slug: string) => {
-    if (!window.confirm('Voulez-vous vraiment supprimer cette catégorie ?')) return;
     setCatError('');
     setCatSuccess('');
+    
+    // Check if products are still attached to this category
+    const associatedProducts = products.filter((p) => p.category === slug || p.categoryId === slug);
+    if (associatedProducts.length > 0) {
+      setCatError(`Impossible de supprimer la catégorie "${slug}" car ${associatedProducts.length} produit(s) y sont encore associés. Veuillez réassigner ou supprimer ces produits d'abord.`);
+      return;
+    }
+
+    if (!window.confirm('Voulez-vous vraiment supprimer cette catégorie ?')) return;
     try {
       // 1. Direct delete from Firestore for instant real-time sync
       await deleteDoc(doc(db, "categories", slug));
@@ -465,8 +517,8 @@ export default function AdminPanel({
     setProdPrice(p.price);
     setProdPromo(p.promoPrice);
     setProdStock(p.stock);
-    setProdImg(p.images[0]);
-    setProdCat(p.category);
+    setProdImg(p.images?.[0] || 'https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=600&auto=format&fit=crop');
+    setProdCat(p.category || p.categoryId || (categories[0]?.slug || 'soins-peau'));
     setProdBrand(p.brand);
     setShowProductModal(true);
   };
@@ -972,13 +1024,21 @@ export default function AdminPanel({
                         title="Cliquer pour modifier cet article"
                       >
                         <td className="py-3 px-6">
-                          <img src={p.images[0]} alt={p.name} className="h-10 w-10 object-cover rounded-xl border border-rose-50" />
+                          <img 
+                            src={p.images?.[0] || "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=200&auto=format&fit=crop"} 
+                            alt={p.name} 
+                            className="h-10 w-10 object-cover rounded-xl border border-rose-50"
+                            referrerPolicy="no-referrer"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=200&auto=format&fit=crop";
+                            }}
+                          />
                         </td>
                         <td className="py-3 px-6 font-bold text-rose-950 max-w-[280px]">
                           <p className="truncate text-sm" title={p.name}>{p.name}</p>
                           <p className="text-[10px] text-zinc-400 font-normal truncate mt-0.5">{p.description}</p>
                         </td>
-                        <td className="py-3 px-6 font-mono capitalize">{p.category.replace('-', ' ')}</td>
+                        <td className="py-3 px-6 font-mono capitalize">{(p.category || p.categoryId || '').replace('-', ' ')}</td>
                         <td className="py-3 px-6">{p.brand}</td>
                         <td className="py-3 px-6 text-right font-extrabold text-rose-800">
                           {p.promoPrice ? (
@@ -1127,15 +1187,83 @@ export default function AdminPanel({
                         </select>
                       </div>
 
-                      <div>
-                        <label className="block text-zinc-700 font-bold mb-1">Lien d'image de présentation *</label>
-                        <input
-                          type="text"
-                          required
-                          value={prodImg}
-                          onChange={(e) => setProdImg(e.target.value)}
-                          className="w-full p-3 bg-zinc-50 border border-zinc-200 rounded-xl"
-                        />
+                      <div className="border-t border-rose-50 pt-3">
+                        <label className="block text-rose-950 font-extrabold mb-1.5 text-xs">Image du produit *</label>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px]">
+                          {/* Option 1: File Importer */}
+                          <div className="p-3 bg-rose-50/10 border border-dashed border-rose-200 rounded-xl flex flex-col items-center justify-center text-center space-y-1.5 min-h-[110px] relative hover:bg-rose-50/20 transition group">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              id="product-file-upload"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  compressImage(file).then(compressed => {
+                                    setProdImg(compressed);
+                                  }).catch(() => {
+                                    const reader = new FileReader();
+                                    reader.onloadend = () => {
+                                      if (typeof reader.result === 'string') {
+                                        setProdImg(reader.result);
+                                      }
+                                    };
+                                    reader.readAsDataURL(file);
+                                  });
+                                }
+                              }}
+                            />
+                            <label htmlFor="product-file-upload" className="cursor-pointer flex flex-col items-center justify-center w-full h-full space-y-1">
+                              <FolderOpen className="h-6 w-6 text-rose-400 group-hover:scale-110 transition duration-200" />
+                              <span className="font-bold text-rose-950">Importer un fichier</span>
+                              <span className="text-[9px] text-zinc-400 font-normal">Formats: PNG, JPG, WEBP</span>
+                            </label>
+                          </div>
+
+                          {/* Option 2: Image URL input */}
+                          <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-xl flex flex-col justify-center space-y-1.5 min-h-[110px]">
+                            <span className="font-bold text-zinc-700 block">Ou lien URL direct</span>
+                            <input
+                              type="text"
+                              placeholder="ex: https://images.unsplash.com/..."
+                              value={prodImg.startsWith('data:') ? '' : prodImg}
+                              onChange={(e) => setProdImg(e.target.value)}
+                              className="w-full p-2.5 bg-white border border-zinc-200 rounded-lg text-[10px] font-mono"
+                            />
+                            <p className="text-[9px] text-zinc-400 leading-none">URL web vers une image publique.</p>
+                          </div>
+                        </div>
+
+                        {/* Active Preview */}
+                        {prodImg && (
+                          <div className="mt-3 p-2 bg-zinc-50 border border-zinc-200 rounded-xl flex items-center justify-between">
+                            <div className="flex items-center space-x-2.5">
+                              <img 
+                                src={prodImg} 
+                                alt="Aperçu produit" 
+                                className="h-10 w-10 object-cover rounded-lg border border-rose-100"
+                                referrerPolicy="no-referrer"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=600&auto=format&fit=crop";
+                                }}
+                              />
+                              <div className="max-w-[200px]">
+                                <span className="font-bold text-rose-950 text-[10px] block">Aperçu sélectionné</span>
+                                <span className="text-[9px] text-zinc-400 font-mono block truncate">
+                                  {prodImg.startsWith('data:') ? 'Image importée (Base64)' : prodImg}
+                                </span>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setProdImg('https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=600&auto=format&fit=crop')}
+                              className="px-2 py-1 bg-red-50 hover:bg-red-100 text-red-600 font-extrabold text-[9px] rounded transition"
+                            >
+                              Réinitialiser
+                            </button>
+                          </div>
+                        )}
                       </div>
 
                       <div className="pt-2 flex justify-end gap-2.5">
@@ -1306,13 +1434,17 @@ export default function AdminPanel({
                         onChange={(e) => {
                           const file = e.target.files?.[0];
                           if (file) {
-                            const reader = new FileReader();
-                            reader.onloadend = () => {
-                              if (typeof reader.result === 'string') {
-                                setCatImageUrlInput(reader.result);
-                              }
-                            };
-                            reader.readAsDataURL(file);
+                            compressImage(file).then(compressed => {
+                              setCatImageUrlInput(compressed);
+                            }).catch(() => {
+                              const reader = new FileReader();
+                              reader.onloadend = () => {
+                                if (typeof reader.result === 'string') {
+                                  setCatImageUrlInput(reader.result);
+                                }
+                              };
+                              reader.readAsDataURL(file);
+                            });
                           }
                         }}
                       />
@@ -1491,13 +1623,17 @@ export default function AdminPanel({
                                 onChange={(e) => {
                                   const file = e.target.files?.[0];
                                   if (file) {
-                                    const reader = new FileReader();
-                                    reader.onloadend = () => {
-                                      if (typeof reader.result === 'string') {
-                                        setEditCatImageUrl(reader.result);
-                                      }
-                                    };
-                                    reader.readAsDataURL(file);
+                                    compressImage(file).then(compressed => {
+                                      setEditCatImageUrl(compressed);
+                                    }).catch(() => {
+                                      const reader = new FileReader();
+                                      reader.onloadend = () => {
+                                        if (typeof reader.result === 'string') {
+                                          setEditCatImageUrl(reader.result);
+                                        }
+                                      };
+                                      reader.readAsDataURL(file);
+                                    });
                                   }
                                 }}
                               />

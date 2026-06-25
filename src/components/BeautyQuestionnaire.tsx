@@ -478,7 +478,15 @@ export default function BeautyQuestionnaire({
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {matchedRecs.map((prod) => (
                     <div key={prod.id} className="bg-white rounded-2xl p-4 border border-rose-100 shadow-sm flex space-x-4 items-center">
-                      <img src={prod.images[0]} alt={prod.name} className="h-16 w-16 object-cover rounded-xl shrink-0" />
+                      <img 
+                        src={prod.images?.[0] || "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=200&auto=format&fit=crop"} 
+                        alt={prod.name} 
+                        className="h-16 w-16 object-cover rounded-xl shrink-0" 
+                        referrerPolicy="no-referrer"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=200&auto=format&fit=crop";
+                        }}
+                      />
                       <div className="min-w-0">
                         <p className="text-xs font-bold text-rose-950 truncate leading-tight">{prod.name}</p>
                         <p className="text-[10px] text-zinc-400 mt-0.5">{prod.brand} • {prod.category}</p>

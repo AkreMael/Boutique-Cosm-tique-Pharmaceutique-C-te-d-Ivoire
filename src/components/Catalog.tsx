@@ -224,9 +224,13 @@ export default function Catalog({
                   {/* Thumbnail Cover image */}
                   <div className="relative h-56 bg-zinc-100 overflow-hidden shrink-0 select-none">
                     <img 
-                      src={product.images[0]} 
+                      src={product.images?.[0] || "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=600&auto=format&fit=crop"} 
                       alt={product.name} 
                       className="h-full w-full object-cover group-hover:scale-105 transition duration-500"
+                      referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=600&auto=format&fit=crop";
+                      }}
                     />
                     
                     {/* Floating Product Badges */}

@@ -658,25 +658,71 @@ export default function App() {
 
   // Admin operational actions
   const handleAddProduct = async (prodPayload: Omit<Product, 'id' | 'dateAdded'>) => {
-    await fetch('/api/products', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(prodPayload)
-    });
+    const id = `prod-${Date.now()}`;
+    const newProduct: Product = {
+      ...prodPayload,
+      id,
+      dateAdded: new Date().toISOString()
+    };
+
+    // 1. Instantly write to Firestore client-side for instant sync across all users
+    try {
+      await setDoc(doc(db, "products", id), newProduct);
+      console.log("Directly added product to Firestore:", id);
+    } catch (err) {
+      console.error("Direct Firestore product add failed:", err);
+    }
+
+    // 2. Parallel backup sync to backend database
+    try {
+      await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...prodPayload, id })
+      });
+    } catch (err) {
+      console.error("Express add product sync failed:", err);
+    }
   };
 
   const handleUpdateProduct = async (updatedProd: Product) => {
-    await fetch(`/api/products/${updatedProd.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updatedProd)
-    });
+    // 1. Instantly write to Firestore client-side for instant sync across all users
+    try {
+      await setDoc(doc(db, "products", updatedProd.id), updatedProd);
+      console.log("Directly updated product in Firestore:", updatedProd.id);
+    } catch (err) {
+      console.error("Direct Firestore product update failed:", err);
+    }
+
+    // 2. Parallel backup sync to backend database
+    try {
+      await fetch(`/api/products/${updatedProd.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedProd)
+      });
+    } catch (err) {
+      console.error("Express update product sync failed:", err);
+    }
   };
 
   const handleDeleteProduct = async (prodId: string) => {
-    await fetch(`/api/products/${prodId}`, {
-      method: 'DELETE'
-    });
+    // 1. Instantly delete from Firestore client-side for instant sync across all users
+    try {
+      await deleteDoc(doc(db, "products", prodId));
+      console.log("Directly deleted product from Firestore:", prodId);
+    } catch (err) {
+      console.error("Direct Firestore product delete failed:", err);
+    }
+
+    // 2. Parallel backup sync to backend database
+    try {
+      await fetch(`/api/products/${prodId}`, {
+        method: 'DELETE'
+      });
+    } catch (err) {
+      console.error("Express delete product sync failed:", err);
+    }
   };
 
   const handleUpdateOrderStatus = async (orderId: string, status: Order['status']) => {
@@ -969,9 +1015,12 @@ export default function App() {
               <div className="relative h-64 bg-zinc-100 shrink-0">
                 <img 
                   referrerPolicy="no-referrer"
-                  src={selectedProduct.images[0]} 
+                  src={selectedProduct.images?.[0] || "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=600&auto=format&fit=crop"} 
                   alt={selectedProduct.name} 
                   className="h-full w-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=600&auto=format&fit=crop";
+                  }}
                 />
                 <button 
                   onClick={() => setSelectedProduct(null)}
