@@ -19,7 +19,7 @@ const CAROUSEL_SLIDES = [
     title: "Éclat Sublime & Hydratation",
     desc: "-20% sur toute notre sélection à base de Beurre de Karité naturel.",
     bg: "bg-gradient-to-r from-rose-500 to-pink-600",
-    image: "https://images.unsplash.com/photo-1608248597481-496100c8c836?q=80&w=600&auto=format&fit=crop",
+    image: "https://i.supaimg.com/0543a7e5-673b-44b9-9668-8152c5aea01b/28232fd8-ce18-4f8a-bb58-4e684a6feb11.png",
     linkCategory: "cremes-soins"
   },
   {
@@ -27,8 +27,8 @@ const CAROUSEL_SLIDES = [
     badge: "OFFRE SPECIALE",
     title: "Sérums & Anti-Taches",
     desc: "Retrouvez un teint unifié, protégé du soleil chaud d'Abidjan.",
-    bg: "bg-gradient-to-r from-rose-600 to-orange-550",
-    image: "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=600&auto=format&fit=crop",
+    bg: "bg-gradient-to-r from-rose-600 to-orange-500",
+    image: "https://i.supaimg.com/0543a7e5-673b-44b9-9668-8152c5aea01b/3540b95e-f688-465f-b906-4f08f68cf1c6.png",
     linkCategory: "soins-peau"
   },
   {
@@ -37,7 +37,7 @@ const CAROUSEL_SLIDES = [
     title: "Soin Capillaire Intense",
     desc: "Huiles et après-shampooings fortifiants pour stimuler la pousse.",
     bg: "bg-gradient-to-r from-pink-700 to-rose-500",
-    image: "https://images.unsplash.com/photo-1527799863830-de7f4067c29d?q=80&w=600&auto=format&fit=crop",
+    image: "https://i.supaimg.com/0543a7e5-673b-44b9-9668-8152c5aea01b/c3ee43ce-e9e1-4145-ad98-bfa89b782426.png",
     linkCategory: "produits-capillaires"
   }
 ];
@@ -92,12 +92,12 @@ export default function Home({
     <div id="home-view-container" className="pb-24 bg-white font-sans animate-fade-in animate-duration-300">
       
       {/* 🚀 BANNER HERO & PROMOTIONS SLIDER */}
-      <div className="px-4 py-4 md:px-8 mt-1 max-w-7xl mx-auto">
-        <div className="relative rounded-[2rem] overflow-hidden shadow-sm border border-rose-50 h-[240px] sm:h-[300px]">
+      <div className="px-4 py-4 md:px-8 mt-1 max-w-5xl mx-auto">
+        <div className="relative rounded-[2rem] overflow-hidden shadow-sm border border-rose-50 h-[260px] sm:h-[320px]">
           {CAROUSEL_SLIDES.map((slide, idx) => (
             <div
               key={slide.id}
-              className={`absolute inset-0 transition-opacity duration-1000 flex items-center justify-between p-6 sm:p-12 text-white ${
+              className={`absolute inset-0 transition-opacity duration-1000 flex items-center justify-between p-6 sm:p-10 text-white ${
                 idx === currentSlide ? "opacity-100 z-10" : "opacity-0 z-0"
               }`}
             >
@@ -107,48 +107,60 @@ export default function Home({
               {/* Overlay graphics */}
               <div className="absolute -top-12 -right-12 h-44 w-44 rounded-full bg-white/10 blur-xl"></div>
               
-              {/* Slide Content */}
-              <div className="relative z-10 max-w-md space-y-2 sm:space-y-4">
-                <span className="px-3 py-1 bg-white/20 text-white border border-white/25 rounded-full text-[10px] font-bold tracking-widest uppercase">
-                  {slide.badge}
-                </span>
-                <h3 className="text-xl sm:text-3.5xl font-extrabold leading-tight tracking-tight text-white drop-shadow-sm">
-                  {slide.title}
-                </h3>
-                <p className="text-rose-100 text-xs sm:text-sm font-medium leading-relaxed line-clamp-2">
-                  {slide.desc}
-                </p>
-                <div className="pt-2">
+              {/* Slide Content Layout: Image on Left, Text Below It */}
+              <div className="relative z-10 flex items-center justify-between w-full h-full gap-4">
+                
+                {/* Left Block: Contains the Image, and right below it the description text */}
+                <div className="flex flex-col items-start justify-center h-full space-y-3.5">
+                  
+                  {/* Slide Image - Positioned on the left of the card, slightly integrated into the background color */}
+                  <div className="relative rounded-2xl overflow-hidden shadow-md border border-white/25 h-[100px] w-[150px] sm:h-[120px] sm:w-[190px] shrink-0 bg-rose-950/20 backdrop-blur-xs">
+                    <img
+                      referrerPolicy="no-referrer"
+                      src={slide.image}
+                      alt={slide.title}
+                      className="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
+                    />
+                    {/* Overlay to subtly blend image into the background color */}
+                    <div className="absolute inset-0 bg-rose-950/15 mix-blend-multiply pointer-events-none"></div>
+                  </div>
+
+                  {/* Descriptive Text - Placed directly below the image */}
+                  <div className="space-y-1 max-w-xs sm:max-w-md">
+                    <span className="inline-block px-2.5 py-0.5 bg-white/25 text-white border border-white/20 rounded-full text-[8px] sm:text-[9px] font-extrabold tracking-widest uppercase">
+                      {slide.badge}
+                    </span>
+                    <h3 className="text-sm sm:text-xl font-extrabold leading-tight tracking-tight text-white drop-shadow-xs">
+                      {slide.title}
+                    </h3>
+                    <p className="text-rose-100 text-[10px] sm:text-xs font-medium leading-relaxed line-clamp-1 sm:line-clamp-2">
+                      {slide.desc}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Right Block: Action Button */}
+                <div className="shrink-0 self-center sm:self-end sm:mb-2">
                   <button
                     onClick={() => onSwitchTab('categories', slide.linkCategory)}
-                    className="px-5 py-2.5 bg-white text-rose-950 font-black text-xs rounded-xl shadow-md hover:bg-rose-50 transition active:scale-95 flex items-center gap-1 cursor-pointer"
+                    className="px-4 py-2 sm:px-5 sm:py-2.5 bg-white text-rose-950 font-black text-[9px] sm:text-xs rounded-xl shadow-md hover:bg-rose-50 transition active:scale-95 flex items-center gap-1 cursor-pointer"
                   >
                     <span>Profiter de l'offre</span>
-                    <ChevronRight className="h-4.5 w-4.5" />
+                    <ChevronRight className="h-4 w-4" />
                   </button>
                 </div>
-              </div>
-
-              {/* Slide Image */}
-              <div className="relative z-10 hidden md:block h-full w-1/3 p-4">
-                <img
-                  referrerPolicy="no-referrer"
-                  src={slide.image}
-                  alt={slide.title}
-                  className="h-full w-full object-cover rounded-2xl shadow-xl border border-white/20"
-                />
               </div>
             </div>
           ))}
 
           {/* Dots Indicators */}
-          <div className="absolute bottom-4 left-6 sm:left-12 z-20 flex gap-2">
+          <div className="absolute bottom-4 left-6 sm:left-10 z-20 flex gap-2">
             {CAROUSEL_SLIDES.map((_, idx) => (
               <button
                 key={idx}
                 onClick={() => setCurrentSlide(idx)}
-                className={`h-2.5 rounded-full transition-all duration-300 ${
-                  idx === currentSlide ? "w-8 bg-white" : "w-2.5 bg-white/40"
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  idx === currentSlide ? "w-6 bg-white" : "w-2 bg-white/40"
                 }`}
                 aria-label={`Aller au slide ${idx + 1}`}
               ></button>
