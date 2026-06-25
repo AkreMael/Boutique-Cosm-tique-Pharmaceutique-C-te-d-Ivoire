@@ -311,17 +311,24 @@ export default function AdminPanel({
       setCatError('La description de la catégorie est requise.');
       return;
     }
-    if (!editCatImageUrl.trim()) {
+
+    // Determine final image URL, preserving existing if not changed or if input is empty
+    const finalImageUrl = (editCatImageUrl.trim() && editCatImageUrl.trim() !== (editCategory.imageUrl || editCategory.image || ''))
+      ? editCatImageUrl.trim()
+      : (editCategory.imageUrl || editCategory.image || editCatImageUrl.trim());
+
+    if (!finalImageUrl) {
       setCatError("L'image de la catégorie est requise.");
       return;
     }
 
     const updatedCategoryData = {
+      ...editCategory,
       slug: editCategory.slug,
       name: editCatName.trim(),
       description: editCatDesc.trim(),
-      imageUrl: editCatImageUrl.trim(),
-      image: editCatImageUrl.trim(),
+      imageUrl: finalImageUrl,
+      image: finalImageUrl,
       icon: editCategory.icon || 'Sparkles',
       parentSlug: editCatParentSlug || null
     };
@@ -484,6 +491,11 @@ export default function AdminPanel({
     setIsSubmittingProduct(true);
     try {
       if (editProduct) {
+        // If prodImg has not changed from the original first image, keep the existing images list
+        const finalImages = (prodImg && prodImg !== (editProduct.images?.[0] || ''))
+          ? [prodImg]
+          : (editProduct.images && editProduct.images.length > 0 ? editProduct.images : [prodImg]);
+
         await onUpdateProduct({
           ...editProduct,
           name: prodName,
@@ -491,7 +503,7 @@ export default function AdminPanel({
           price: prodPrice,
           promoPrice: prodPromo || undefined,
           stock: prodStock,
-          images: [prodImg],
+          images: finalImages,
           category: prodCat,
           categoryId: prodCat,
           brand: prodBrand,
