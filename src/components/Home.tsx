@@ -233,7 +233,7 @@ export default function Home({
             <button
               key={cat.slug}
               onClick={() => onSwitchTab('categories', cat.slug)}
-              className="flex flex-col items-center p-3 bg-zinc-50 hover:bg-rose-50/40 rounded-2xl border border-zinc-100 hover:border-rose-150 transition group cursor-pointer text-center"
+              className="flex flex-col items-center p-2 sm:p-3 bg-zinc-50 hover:bg-rose-50/40 rounded-2xl border border-zinc-100 hover:border-rose-150 transition group cursor-pointer text-center"
             >
               <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-white overflow-hidden flex items-center justify-center shadow-xs border border-zinc-100 group-hover:scale-105 transition-all">
                 <img
@@ -243,7 +243,7 @@ export default function Home({
                   className="h-full w-full object-cover"
                 />
               </div>
-              <span className="text-[10px] sm:text-xs font-bold text-zinc-800 group-hover:text-rose-600 mt-2 line-clamp-2 max-w-full h-8 flex items-center justify-center">
+              <span className="text-[10px] sm:text-xs font-bold text-zinc-800 group-hover:text-rose-600 mt-2 leading-tight text-center break-words w-full">
                 {cat.name}
               </span>
             </button>
