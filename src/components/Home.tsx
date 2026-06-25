@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, ChevronRight, Sparkles, Heart, Plus, Check, ShoppingBag, Eye, ArrowRight } from 'lucide-react';
+import { Search, ChevronRight, Sparkles, Heart, Plus, Check, ShoppingBag, Eye, ArrowRight, X, Send } from 'lucide-react';
 import { Product, Category } from '../types';
 
 interface HomeProps {
@@ -10,6 +10,9 @@ interface HomeProps {
   onSwitchTab: (tab: string, arg?: any) => void;
   currentSearchQuery: string;
   setGlobalSearchQuery: (query: string) => void;
+  currentUser?: any;
+  onShowLogin?: () => void;
+  onSendMessage?: (text: string) => Promise<void>;
 }
 
 const CAROUSEL_SLIDES = [
@@ -42,6 +45,84 @@ const CAROUSEL_SLIDES = [
   }
 ];
 
+const OFFER_DETAILS: Record<number, {
+  image: string;
+  title: string;
+  badge: string;
+  description: string;
+  blocks: { title: string; desc: string; icon: string }[];
+}> = {
+  1: {
+    image: "https://i.supaimg.com/0543a7e5-673b-44b9-9668-8152c5aea01b/28232fd8-ce18-4f8a-bb58-4e684a6feb11.png",
+    title: "Éclat Sublime & Hydratation",
+    badge: "PROMO EXCLUSIVE",
+    description: "-20% sur toute notre sélection à base de Beurre de Karité naturel.",
+    blocks: [
+      {
+        title: "Ingrédients Bio & Naturels",
+        desc: "Notre formule intègre du beurre de karité 100% biologique extrait traditionnellement en Côte d'Ivoire.",
+        icon: "🌿"
+      },
+      {
+        title: "Hydratation Intense 24h",
+        desc: "Pénètre en profondeur pour restaurer l'élasticité de votre peau et prévenir le dessèchement cutané.",
+        icon: "💧"
+      },
+      {
+        title: "Teint Éclatant & Unifié",
+        desc: "Riche en vitamines A, D, E et F pour réparer, adoucir et donner un coup d'éclat immédiat et durable.",
+        icon: "✨"
+      }
+    ]
+  },
+  2: {
+    image: "https://i.supaimg.com/0543a7e5-673b-44b9-9668-8152c5aea01b/3540b95e-f688-465f-b906-4f08f68cf1c6.png",
+    title: "Sérums & Anti-Taches",
+    badge: "OFFRE SPECIALE",
+    description: "Retrouvez un teint unifié, protégé du soleil chaud d'Abidjan.",
+    blocks: [
+      {
+        title: "Action Anti-Taches Ciblée",
+        desc: "Estompe visiblement les taches pigmentaires, les cicatrices d'acné et l'hyperpigmentation en 4 semaines.",
+        icon: "🎯"
+      },
+      {
+        title: "Bouclier Solaire Actif",
+        desc: "Protège efficacement l'épiderme contre les agressions thermiques et les effets nocifs des UV d'Abidjan.",
+        icon: "☀️"
+      },
+      {
+        title: "Texture Ultra Légère",
+        desc: "Formule non grasse qui pénètre instantanément, parfaite pour une application sous le maquillage.",
+        icon: "⚡"
+      }
+    ]
+  },
+  3: {
+    image: "https://i.supaimg.com/0543a7e5-673b-44b9-9668-8152c5aea01b/c3ee43ce-e9e1-4145-ad98-bfa89b782426.png",
+    title: "Soin Capillaire Intense",
+    badge: "CONSEIL PHARMACIE",
+    description: "Huiles et après-shampooings fortifiants pour stimuler la pousse.",
+    blocks: [
+      {
+        title: "Pousse & Densité Cheveux",
+        desc: "Active la micro-circulation du cuir chevelu pour réveiller les bulbes capillaires et accélérer la pousse.",
+        icon: "🌱"
+      },
+      {
+        title: "Anti-Casse & Réparation",
+        desc: "Gaine la fibre capillaire de la racine aux pointes pour renforcer la structure et stopper la casse.",
+        icon: "💪"
+      },
+      {
+        title: "Soin d'Origine Naturelle",
+        desc: "Huiles essentielles pures de ricin, d'argan et de romarin sélectionnées par nos pharmaciens experts.",
+        icon: "🧴"
+      }
+    ]
+  }
+};
+
 export default function Home({
   products,
   categories,
@@ -49,10 +130,22 @@ export default function Home({
   onSelectProductDetails,
   onSwitchTab,
   currentSearchQuery,
-  setGlobalSearchQuery
+  setGlobalSearchQuery,
+  currentUser,
+  onShowLogin,
+  onSendMessage
 }: HomeProps) {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [addedProductId, setAddedProductId] = useState<string | null>(null);
+  
+  // States for detailed offer view & interactive request form
+  const [selectedOffer, setSelectedOffer] = useState<typeof CAROUSEL_SLIDES[number] | null>(null);
+  const [showDemandForm, setShowDemandForm] = useState(false);
+  const [demandSubject, setDemandSubject] = useState('');
+  const [demandCategory, setDemandCategory] = useState('problème de peau / du corps');
+  const [demandDescription, setDemandDescription] = useState('');
+  const [isSubmittingDemand, setIsSubmittingDemand] = useState(false);
+  const [demandSuccessMessage, setDemandSuccessMessage] = useState('');
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -65,6 +158,48 @@ export default function Home({
     onAddToCart(product);
     setAddedProductId(product.id);
     setTimeout(() => setAddedProductId(null), 1500);
+  };
+
+  const handleSubmitDemand = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!demandSubject.trim() || !demandDescription.trim()) return;
+
+    if (!currentUser) {
+      if (onShowLogin) {
+        onShowLogin();
+      }
+      return;
+    }
+
+    setIsSubmittingDemand(true);
+    setDemandSuccessMessage('');
+
+    try {
+      const formattedText = `🚨 *NOUVELLE DEMANDE DE CONSEIL DEPUIS L'OFFRE* 🚨\n\n` +
+        `• *Offre concernée :* ${selectedOffer?.title || 'Offre Spéciale'}\n` +
+        `• *Sujet/Besoin :* ${demandSubject.trim()}\n` +
+        `• *Catégorie de besoin :* ${demandCategory}\n` +
+        `• *Description :* ${demandDescription.trim()}`;
+
+      if (onSendMessage) {
+        await onSendMessage(formattedText);
+        setDemandSuccessMessage('Votre demande a été envoyée avec succès à notre équipe ! Elle est désormais visible dans votre messagerie.');
+        
+        // Reset form inputs
+        setDemandSubject('');
+        setDemandDescription('');
+        setTimeout(() => {
+          setDemandSuccessMessage('');
+          setShowDemandForm(false);
+          onSwitchTab('chat');
+          setSelectedOffer(null);
+        }, 3000);
+      }
+    } catch (error) {
+      console.error("Error sending demand message:", error);
+    } finally {
+      setIsSubmittingDemand(false);
+    }
   };
 
   // Extract popular products: either defined by sales or just select top 6 sorted by stock count / availability
@@ -134,7 +269,13 @@ export default function Home({
               <div className="relative z-10 flex items-center justify-between w-full h-full gap-4">
                 
                 {/* Left Block: Contains the Image, and right below it the description text */}
-                <div className="flex flex-col items-start justify-center h-full space-y-3.5">
+                <div 
+                  onClick={() => {
+                    setSelectedOffer(slide);
+                    setShowDemandForm(false);
+                  }}
+                  className="flex flex-col items-start justify-center h-full space-y-3.5 cursor-pointer group/slide select-none"
+                >
                   
                   {/* Slide Image - Positioned on the left of the card, slightly integrated into the background color */}
                   <div className="relative rounded-2xl overflow-hidden shadow-md border border-white/25 h-[100px] w-[150px] sm:h-[120px] sm:w-[190px] shrink-0 bg-rose-950/20 backdrop-blur-xs">
@@ -142,7 +283,7 @@ export default function Home({
                       referrerPolicy="no-referrer"
                       src={slide.image}
                       alt={slide.title}
-                      className="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover/slide:scale-105"
                     />
                     {/* Overlay to subtly blend image into the background color */}
                     <div className="absolute inset-0 bg-rose-950/15 mix-blend-multiply pointer-events-none"></div>
@@ -153,7 +294,7 @@ export default function Home({
                     <span className="inline-block px-2.5 py-0.5 bg-white/25 text-white border border-white/20 rounded-full text-[8px] sm:text-[9px] font-extrabold tracking-widest uppercase">
                       {slide.badge}
                     </span>
-                    <h3 className="text-sm sm:text-xl font-extrabold leading-tight tracking-tight text-white drop-shadow-xs">
+                    <h3 className="text-sm sm:text-xl font-extrabold leading-tight tracking-tight text-white drop-shadow-xs group-hover/slide:text-rose-100 transition-colors">
                       {slide.title}
                     </h3>
                     <p className="text-rose-100 text-[10px] sm:text-xs font-medium leading-relaxed line-clamp-1 sm:line-clamp-2">
@@ -165,7 +306,10 @@ export default function Home({
                 {/* Right Block: Action Button */}
                 <div className="shrink-0 self-center sm:self-end sm:mb-2">
                   <button
-                    onClick={() => onSwitchTab('categories', slide.linkCategory)}
+                    onClick={() => {
+                      setSelectedOffer(slide);
+                      setShowDemandForm(false);
+                    }}
                     className="px-4 py-2 sm:px-5 sm:py-2.5 bg-white text-rose-950 font-black text-[9px] sm:text-xs rounded-xl shadow-md hover:bg-rose-50 transition active:scale-95 flex items-center gap-1 cursor-pointer"
                   >
                     <span>Profiter de l'offre</span>
@@ -456,6 +600,219 @@ export default function Home({
           })}
         </div>
       </div>
+
+      {/* 🌟 DETAILED OFFER MODAL WITH INTERACTIVE REQUEST FORM & HORIZONTAL SLIDER */}
+      {selectedOffer && (
+        <div className="fixed inset-0 bg-zinc-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="w-full max-w-lg bg-white rounded-3xl overflow-hidden shadow-2xl relative border border-rose-50 flex flex-col my-auto max-h-[90vh]">
+            
+            {/* Close Button */}
+            <button
+              onClick={() => {
+                setSelectedOffer(null);
+                setShowDemandForm(false);
+                setDemandSuccessMessage('');
+              }}
+              className="absolute top-4 right-4 bg-white/80 backdrop-blur-md rounded-full p-2 text-zinc-700 hover:bg-white hover:text-rose-950 transition shadow-md z-10 cursor-pointer"
+              aria-label="Fermer"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            {/* Offer Cover Image */}
+            <div className="relative h-44 sm:h-52 w-full bg-rose-950 shrink-0">
+              <img
+                referrerPolicy="no-referrer"
+                src={selectedOffer.image}
+                alt={selectedOffer.title}
+                className="h-full w-full object-cover opacity-90"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent"></div>
+              <div className="absolute bottom-4 left-6">
+                <span className="inline-block px-2.5 py-0.5 bg-rose-600 text-white rounded-full text-[9px] font-extrabold tracking-widest uppercase mb-1.5 shadow-sm">
+                  {selectedOffer.badge}
+                </span>
+                <h3 className="text-lg sm:text-2xl font-black text-zinc-950 leading-tight">
+                  {selectedOffer.title}
+                </h3>
+              </div>
+            </div>
+
+            {/* Scrollable Content Area */}
+            <div className="p-6 overflow-y-auto space-y-5 flex-1">
+              {!showDemandForm ? (
+                <>
+                  {/* Step 1: Offer Details & 3 horizontal slider blocks */}
+                  <div className="space-y-4">
+                    <p className="text-xs sm:text-sm text-zinc-600 leading-relaxed">
+                      {selectedOffer.desc} Profitez de conseils d'experts pharmaciens et d'un accompagnement personnalisé pour sublimer votre éclat naturel.
+                    </p>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] uppercase tracking-wider font-extrabold text-zinc-400">
+                          Avantages de l'offre (Glisser) :
+                        </span>
+                        <span className="text-[10px] text-rose-500 font-bold animate-pulse">
+                          ← Glisser de gauche à droite →
+                        </span>
+                      </div>
+
+                      {/* 3 Blocks Horizontal Scroll Slider */}
+                      <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-none scroll-smooth">
+                        {(OFFER_DETAILS[selectedOffer.id]?.blocks || []).map((b, i) => (
+                          <div 
+                            key={i} 
+                            className="min-w-[80%] sm:min-w-[240px] snap-center bg-zinc-50 border border-zinc-150/60 rounded-2xl p-4 flex flex-col justify-between shrink-0 hover:border-rose-150 transition shadow-xs"
+                          >
+                            <div className="text-2xl mb-2">{b.icon}</div>
+                            <div>
+                              <h4 className="font-extrabold text-zinc-900 text-xs sm:text-sm leading-snug">
+                                {b.title}
+                              </h4>
+                              <p className="text-[10px] sm:text-xs text-zinc-500 mt-1 leading-relaxed">
+                                {b.desc}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions buttons */}
+                  <div className="pt-4 border-t border-zinc-100 grid grid-cols-2 gap-3 shrink-0">
+                    <button
+                      onClick={() => {
+                        onSwitchTab('offers');
+                        setSelectedOffer(null);
+                      }}
+                      className="w-full py-3 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-extrabold text-xs rounded-xl transition cursor-pointer text-center shadow-xs flex items-center justify-center gap-1.5"
+                    >
+                      <ShoppingBag className="h-4 w-4" />
+                      <span>Découvrir l'offre</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowDemandForm(true);
+                      }}
+                      className="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs rounded-xl transition cursor-pointer text-center shadow-md flex items-center justify-center gap-1.5 hover:scale-[1.02] active:scale-98"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      <span>Soumettre demande</span>
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Step 2: Interactive request form */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-extrabold text-sm text-zinc-900 uppercase tracking-wider">
+                        Votre demande personnalisée
+                      </h4>
+                      <button
+                        onClick={() => setShowDemandForm(false)}
+                        className="text-xs text-rose-600 hover:text-rose-800 font-bold"
+                      >
+                        Retour aux détails
+                      </button>
+                    </div>
+
+                    {demandSuccessMessage ? (
+                      <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 text-center space-y-2 py-6">
+                        <div className="mx-auto h-12 w-12 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 text-xl font-bold">
+                          ✓
+                        </div>
+                        <p className="text-xs text-emerald-800 font-semibold leading-relaxed">
+                          {demandSuccessMessage}
+                        </p>
+                      </div>
+                    ) : (
+                      <form onSubmit={handleSubmitDemand} className="space-y-4">
+                        {!currentUser ? (
+                          <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 flex flex-col gap-2">
+                            <p className="text-xs text-amber-800 font-medium leading-relaxed">
+                              Vous devez être connecté pour soumettre votre demande et échanger avec nos pharmaciens.
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (onShowLogin) onShowLogin();
+                                setSelectedOffer(null);
+                                setShowDemandForm(false);
+                              }}
+                              className="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs rounded-xl transition cursor-pointer"
+                            >
+                              Se connecter / S'inscrire
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="space-y-1">
+                              <label className="block text-[10px] uppercase font-extrabold text-zinc-500 tracking-wider">
+                                Sujet / Nom du besoin
+                              </label>
+                              <input
+                                type="text"
+                                required
+                                value={demandSubject}
+                                onChange={(e) => setDemandSubject(e.target.value)}
+                                placeholder="ex: Problème d'acné ou conseils cheveux"
+                                className="w-full px-3 py-2 border border-zinc-200 rounded-xl text-xs focus:ring-1 focus:ring-rose-500 focus:border-rose-500 outline-hidden font-medium"
+                              />
+                            </div>
+
+                            <div className="space-y-1">
+                              <label className="block text-[10px] uppercase font-extrabold text-zinc-500 tracking-wider">
+                                Catégorie du besoin
+                              </label>
+                              <select
+                                value={demandCategory}
+                                onChange={(e) => setDemandCategory(e.target.value)}
+                                className="w-full px-3 py-2 border border-zinc-200 rounded-xl text-xs focus:ring-1 focus:ring-rose-500 focus:border-rose-500 outline-hidden bg-white font-medium"
+                              >
+                                <option value="problème de cheveux">Problème de cheveux</option>
+                                <option value="problème de peau / du corps">Problème de peau / du corps</option>
+                                <option value="besoin de conseil">Besoin de conseil</option>
+                                <option value="recherche d’un produit précis">Recherche d’un produit précis</option>
+                                <option value="autre préoccupation">Autre préoccupation</option>
+                              </select>
+                            </div>
+
+                            <div className="space-y-1">
+                              <label className="block text-[10px] uppercase font-extrabold text-zinc-500 tracking-wider">
+                                Description de la demande
+                              </label>
+                              <textarea
+                                required
+                                rows={4}
+                                value={demandDescription}
+                                onChange={(e) => setDemandDescription(e.target.value)}
+                                placeholder="Décrivez votre préoccupation ou votre type de peau/cheveux pour que notre équipe puisse vous répondre précisément..."
+                                className="w-full px-3 py-2 border border-zinc-200 rounded-xl text-xs focus:ring-1 focus:ring-rose-500 focus:border-rose-500 outline-hidden font-medium resize-none"
+                              />
+                            </div>
+
+                            <button
+                              type="submit"
+                              disabled={isSubmittingDemand}
+                              className="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs rounded-xl transition cursor-pointer shadow-md flex items-center justify-center gap-1.5 disabled:opacity-50"
+                            >
+                              <Send className="h-4 w-4" />
+                              <span>{isSubmittingDemand ? 'Envoi en cours...' : 'Envoyer la demande'}</span>
+                            </button>
+                          </>
+                        )}
+                      </form>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

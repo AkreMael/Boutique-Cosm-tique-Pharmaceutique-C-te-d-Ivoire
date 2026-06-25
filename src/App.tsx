@@ -902,6 +902,13 @@ export default function App() {
                 }}
                 currentSearchQuery={globalSearchQuery}
                 setGlobalSearchQuery={setGlobalSearchQuery}
+                currentUser={currentUser}
+                onShowLogin={() => setShowLoginModal(true)}
+                onSendMessage={async (text) => {
+                  if (currentUser) {
+                    await handleSendMessage(currentUser.id, text);
+                  }
+                }}
               />
             )}
 
