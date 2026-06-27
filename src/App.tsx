@@ -11,6 +11,7 @@ import CategoriesGrid from './components/CategoriesGrid';
 import OffersScreen from './components/OffersScreen';
 import CartScreen from './components/CartScreen';
 import ProfileScreen from './components/ProfileScreen';
+import ProductDetailSheet from './components/ProductDetailSheet';
 import { Product, Category, User, CartItem, Order, ChatSession, ChatMessage, BeautyProfile } from './types';
 import AnimatedBackground from './components/AnimatedBackground';
 import { HeartPulse, Plus, Check, Star, X, Shield, Info, ShoppingBag, MessageSquare, Send, Sparkles, Home as HomeIcon, Grid3X3, BadgePercent, ShoppingCart as BottomCartIcon, User as UserIcon } from 'lucide-react';
@@ -890,8 +891,24 @@ export default function App() {
       {/* 2. CORE RENDERING ENGINE */}
       <main className="flex-1">
         {(!currentUser || currentUser.role === 'client' || adminViewMode === 'client') ? (
-          <>
-            {activeTab === 'home' && (
+          selectedProduct ? (
+            <ProductDetailSheet
+              product={selectedProduct}
+              allProducts={products}
+              currentUser={currentUser}
+              onAddToCart={handleAddToCart}
+              onOrderCreated={handleOrderCreated}
+              onClearCart={handleClearCart}
+              onClose={() => setSelectedProduct(null)}
+              onSelectProduct={setSelectedProduct}
+              onRequireLogin={() => {
+                setPendingAction(null);
+                setShowLoginModal(true);
+              }}
+            />
+          ) : (
+            <>
+              {activeTab === 'home' && (
               <Home
                 products={products}
                 categories={categories}
@@ -1024,6 +1041,7 @@ export default function App() {
               />
             )}
           </>
+          )
         ) : (
           currentUser && (
             <AdminPanel
@@ -1049,104 +1067,7 @@ export default function App() {
         )}
       </main>
 
-      {/* ======================================= */}
-      {/* DRAWER: PRODUCT DETAILS MODAL DETAILCARD */}
-      {/* ======================================= */}
-      {selectedProduct && (
-        <div className="fixed inset-0 z-50 overflow-y-auto" role="dialog">
-          <div 
-            onClick={() => setSelectedProduct(null)} 
-            className="fixed inset-0 bg-zinc-950/70 backdrop-blur-xs"
-          ></div>
-          <div className="flex items-center justify-center min-h-screen p-4 z-55 relative">
-            <div className="bg-white rounded-[2rem] max-w-lg w-full overflow-hidden shadow-2xl text-left border border-rose-50 flex flex-col animate-scale-up">
-              
-              {/* Product Header image cover */}
-              <div className="relative h-64 bg-zinc-100 shrink-0">
-                <img 
-                  referrerPolicy="no-referrer"
-                  src={selectedProduct.images?.[0] || "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=600&auto=format&fit=crop"} 
-                  alt={selectedProduct.name} 
-                  className="h-full w-full object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=600&auto=format&fit=crop";
-                  }}
-                />
-                <button 
-                  onClick={() => setSelectedProduct(null)}
-                  className="absolute top-4 right-4 p-2.5 bg-zinc-900/40 hover:bg-zinc-900/60 rounded-full text-white transition cursor-pointer"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
 
-              {/* Product Card Details */}
-              <div className="p-6 space-y-4">
-                <div className="flex items-center justify-between text-xs font-mono font-bold uppercase tracking-wider text-rose-800">
-                  <span>Marque CI: {selectedProduct.brand}</span>
-                  <span className="text-zinc-400">{selectedProduct.category}</span>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-bold text-rose-950 leading-snug">{selectedProduct.name}</h3>
-                  <div className="flex items-center space-x-2.5 mt-2">
-                    <span className="text-lg font-extrabold text-rose-700">
-                      {selectedProduct.promoPrice ? selectedProduct.promoPrice.toLocaleString() : selectedProduct.price.toLocaleString()} F CFA
-                    </span>
-                    {selectedProduct.promoPrice && (
-                      <span className="text-xs text-zinc-400 line-through">
-                        {selectedProduct.price.toLocaleString()} F CFA
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="border-t border-rose-50 pt-3">
-                  <h4 className="text-[10px] uppercase font-mono tracking-widest font-black text-zinc-400 mb-1">
-                    Description & Conseils d'Utilisation :
-                  </h4>
-                  <p className="text-xs text-zinc-650 leading-relaxed font-normal">
-                    {selectedProduct.description}
-                  </p>
-                </div>
-
-                {/* Shipping conditions & details */}
-                <div className="p-3 bg-zinc-50 border rounded-2xl flex items-center space-x-2.5">
-                  <span className="text-lg">🌿</span>
-                  <p className="text-[10px] text-zinc-500 leading-normal">
-                    Formulé sans perturbateurs endocriniens, idéal pour sublimer et nourrir la peau sous le climat chaud et humide de l'Afrique de l'Ouest.
-                  </p>
-                </div>
-
-                {/* Cart Action bottom bar */}
-                <div className="pt-3 border-t flex justify-between items-center gap-4">
-                  <div>
-                    <span className="text-[10px] font-mono text-zinc-400 block uppercase">Disponibilité locale :</span>
-                    <span className={`text-xs font-bold ${selectedProduct.stock > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                      {selectedProduct.stock > 0 
-                        ? `En Stock centrale (${selectedProduct.stock} pces)` 
-                        : 'En rupture momentanée'}
-                    </span>
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      handleAddToCart(selectedProduct);
-                      setSelectedProduct(null);
-                    }}
-                    disabled={selectedProduct.stock === 0}
-                    className="px-5 py-3 bg-rose-950 hover:bg-rose-900 font-bold text-xs rounded-xl text-white disabled:opacity-50 transition cursor-pointer"
-                  >
-                    Mettre dans mon Panier
-                  </button>
-                </div>
-
-              </div>
-
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* 3. SHOPPING CART DRAWER OVERLAY */}
       <Cart

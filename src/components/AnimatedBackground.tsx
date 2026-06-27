@@ -80,7 +80,8 @@ export default function AnimatedBackground() {
 
   return (
     <div 
-      className="fixed inset-0 pointer-events-none select-none overflow-hidden z-0"
+      className="fixed inset-0 pointer-events-none select-none overflow-hidden"
+      style={{ zIndex: -10 }}
       aria-hidden="true"
     >
       {/* High-performance animations using CSS translate3d to avoid layout invalidation or repaint passes during scroll */}
