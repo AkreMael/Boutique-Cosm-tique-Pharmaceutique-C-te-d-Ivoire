@@ -58,30 +58,44 @@ export default function ProductDetailSheet({
   const [lastCreatedOrderId, setLastCreatedOrderId] = useState<string>('');
   const [formError, setFormError] = useState<string>('');
 
-  // Synchronize form values with currentUser when it changes or is logged in
+  // Keep track of the current product ID and user ID to only reset/sync when the actual product or user changes,
+  // NOT on every re-render of the objects or parent state updates.
+  const prevProductIdRef = useRef<string>('');
+  const prevUserIdRef = useRef<string>('');
+
   useEffect(() => {
-    if (currentUser) {
-      setPhone(currentUser.phone || '');
-      setCity(currentUser.city || '');
-      setAddress(currentUser.address || '');
+    const productId = product?.id || '';
+    const userId = currentUser?.id || '';
+
+    if (productId !== prevProductIdRef.current) {
+      prevProductIdRef.current = productId;
+      // Reset quantity and success states ONLY when the active product changes
+      setQuantity(1);
+      setOrderSuccess(false);
+      setFormError('');
     }
-    // Reset quantity and success states when switching products
-    setQuantity(1);
-    setOrderSuccess(false);
-    setFormError('');
-  }, [product, currentUser]);
+
+    if (userId !== prevUserIdRef.current) {
+      prevUserIdRef.current = userId;
+      if (currentUser) {
+        setPhone(currentUser.phone || '');
+        setCity(currentUser.city || '');
+        setAddress(currentUser.address || '');
+      }
+    }
+  }, [product?.id, currentUser?.id]);
 
   // Scroll smoothly to top of detailed view when product changes
   useEffect(() => {
     if (containerRef.current) {
       containerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-  }, [product]);
+  }, [product?.id]);
 
-  // Find similar/other products (exclude the current one)
+  // Find similar/other products belonging to the SAME category (exclude the current one)
   const otherProducts = allProducts
-    .filter(p => p.id !== product.id)
-    .slice(0, 8); // Take up to 8 other items
+    .filter(p => p.id !== product.id && p.category === product.category)
+    .slice(0, 8); // Take up to 8 other items of the same category
 
   const handleIncrement = () => {
     if (quantity < product.stock) {
