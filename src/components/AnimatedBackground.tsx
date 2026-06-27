@@ -28,13 +28,13 @@ export default function AnimatedBackground() {
 
   useEffect(() => {
     // Generate static list of elements on mount to avoid continuous state updates
-    const initialElements: FloatingElement[] = Array.from({ length: 18 }, (_, i) => {
+    const initialElements: FloatingElement[] = Array.from({ length: 32 }, (_, i) => {
       const char = ELEMENT_POOL[i % ELEMENT_POOL.length];
-      const left = Math.random() * 90 + 5; // keep 5% padding from screen edges
-      const size = Math.random() * 16 + 14; // size between 14px and 30px
-      const delay = Math.random() * -30; // negative delay so they are already spread out on mount
-      const duration = Math.random() * 25 + 25; // duration between 25s and 50s for super slow, elegant flow
-      const swayAmount = Math.random() * 40 + 20; // sway width between 20px and 60px
+      const left = Math.random() * 92 + 4; // keep 4% padding from screen edges
+      const size = Math.random() * 20 + 22; // size between 22px and 42px (larger, more visible)
+      const delay = Math.random() * -45; // negative delay so they are already spread out on mount
+      const duration = Math.random() * 22 + 20; // duration between 20s and 42s for smooth, elegant flow
+      const swayAmount = Math.random() * 60 + 30; // sway width between 30px and 90px
       const rotationDirection = Math.random() > 0.5 ? 1 : -1;
 
       return {
@@ -81,10 +81,10 @@ export default function AnimatedBackground() {
             opacity: 0;
           }
           10% {
-            opacity: 0.28;
+            opacity: 0.42;
           }
           90% {
-            opacity: 0.28;
+            opacity: 0.42;
           }
           100% {
             transform: translateY(-10vh) translateX(var(--sway)) rotate(var(--rot));
