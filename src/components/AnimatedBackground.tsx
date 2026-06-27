@@ -8,8 +8,8 @@ interface FloatingElement {
   delay: number; // seconds
   startX: number; // %
   startY: number; // %
-  midX: number; // %
-  midY: number; // %
+  driftX: number; // px
+  driftY: number; // px
   rot: number; // degrees
 }
 
@@ -34,33 +34,29 @@ export default function AnimatedBackground() {
     const initialElements: FloatingElement[] = Array.from({ length: 45 }, (_, i) => {
       const char = ELEMENT_POOL[i % ELEMENT_POOL.length];
       
-      // Slighly larger sizes as requested (28px to 48px) for excellent visibility
+      // Slightly larger sizes (28px to 48px) for beautiful structure
       const size = Math.round(Math.random() * 20 + 28);
       
-      // Varied and elegant speed: 25s to 45s for organic, smooth drifting
-      const duration = Math.round(Math.random() * 20 + 25);
+      // Extremely smooth, slow, and constant speed: 30s to 50s
+      const duration = Math.round(Math.random() * 20 + 30);
       
-      // Negative delays to keep them pre-spread on mount
-      const delay = Math.round(Math.random() * -45);
+      // Large negative delays so elements are fully pre-spread across the screen on page load
+      const delay = Math.round(Math.random() * -50);
 
-      // Start position distributed evenly in grid-like blocks to ensure complete coverage of the screen
-      const col = i % 5; // 0 to 4
-      const row = Math.floor(i / 5) % 9; // 0 to 8
+      // Start position distributed evenly in grid sectors to ensure 100% global coverage
+      const col = i % 6; // 0 to 5
+      const row = Math.floor(i / 6) % 8; // 0 to 7
       
       // Base positions with random offset inside their grid sectors
-      const startX = Math.round((col * 20) + Math.random() * 15 + 2); // 2% to 97%
-      const startY = Math.round((row * 11) + Math.random() * 9 + 2);  // 2% to 97%
+      const startX = Math.round((col * 16.6) + Math.random() * 10 + 2); // 2% to 98%
+      const startY = Math.round((row * 12.5) + Math.random() * 9 + 2);  // 2% to 98%
 
-      // Midpoint position for the diagonal or wavy drift trajectory
+      // Pure relative translation drift offset for high-performance GPU compositing (no layout repaints!)
       const angle = Math.random() * Math.PI * 2;
-      const driftDistance = Math.random() * 15 + 10; // drift by 10% to 25% of viewport
+      const driftRadius = Math.random() * 80 + 60; // 60px to 140px drifting radius
       
-      let midX = startX + Math.cos(angle) * driftDistance;
-      let midY = startY + Math.sin(angle) * driftDistance;
-
-      // Keep midpoint within bounds
-      midX = Math.max(5, Math.min(95, midX));
-      midY = Math.max(5, Math.min(95, midY));
+      const driftX = Math.round(Math.cos(angle) * driftRadius);
+      const driftY = Math.round(Math.sin(angle) * driftRadius);
 
       const rotationDirection = Math.random() > 0.5 ? 1 : -1;
       const rot = Math.round((Math.random() * 180 + 120) * rotationDirection);
@@ -73,8 +69,8 @@ export default function AnimatedBackground() {
         delay,
         startX,
         startY,
-        midX: Math.round(midX),
-        midY: Math.round(midY),
+        driftX,
+        driftY,
         rot,
       };
     });
@@ -87,60 +83,54 @@ export default function AnimatedBackground() {
       className="fixed inset-0 pointer-events-none select-none overflow-hidden z-0"
       aria-hidden="true"
     >
-      {/* Dynamic Keyframes Generation for high-performance compositor thread CSS animations */}
+      {/* High-performance animations using CSS translate3d to avoid layout invalidation or repaint passes during scroll */}
       <style>{`
         @keyframes driftOrb1 {
-          0% { transform: translate(0px, 0px) scale(1); }
-          33% { transform: translate(40px, -60px) scale(1.1); }
-          66% { transform: translate(-30px, 30px) scale(0.95); }
-          100% { transform: translate(0px, 0px) scale(1); }
+          0% { transform: translate3d(0px, 0px, 0) scale(1); }
+          33% { transform: translate3d(20px, -45px, 0) scale(1.05); }
+          66% { transform: translate3d(-15px, 20px, 0) scale(0.98); }
+          100% { transform: translate3d(0px, 0px, 0) scale(1); }
         }
         @keyframes driftOrb2 {
-          0% { transform: translate(0px, 0px) scale(1); }
-          50% { transform: translate(-50px, 50px) scale(1.15); }
-          100% { transform: translate(0px, 0px) scale(1); }
+          0% { transform: translate3d(0px, 0px, 0) scale(1); }
+          50% { transform: translate3d(-30px, 30px, 0) scale(1.1); }
+          100% { transform: translate3d(0px, 0px, 0) scale(1); }
         }
         @keyframes driftOrb3 {
-          0% { transform: translate(0px, 0px) scale(1); }
-          40% { transform: translate(60px, 40px) scale(0.9); }
-          100% { transform: translate(0px, 0px) scale(1); }
+          0% { transform: translate3d(0px, 0px, 0) scale(1); }
+          40% { transform: translate3d(40px, 25px, 0) scale(0.95); }
+          100% { transform: translate3d(0px, 0px, 0) scale(1); }
         }
 
         .animate-orb-1 {
-          animation: driftOrb1 30s ease-in-out infinite;
+          animation: driftOrb1 35s ease-in-out infinite;
         }
         .animate-orb-2 {
-          animation: driftOrb2 35s ease-in-out infinite;
+          animation: driftOrb2 40s ease-in-out infinite;
         }
         .animate-orb-3 {
-          animation: driftOrb3 32s ease-in-out infinite;
+          animation: driftOrb3 38s ease-in-out infinite;
         }
 
-        /* Seamless looping customized paths for each particle */
+        /* Seamless looping customized paths for each particle using GPU-accelerated translate3d */
         ${elements.map(el => `
           @keyframes path-${el.id} {
             0% {
-              left: ${el.startX}%;
-              top: ${el.startY}%;
-              transform: translate(0, 0) rotate(0deg);
+              transform: translate3d(0, 0, 0) rotate(0deg);
               opacity: 0;
             }
-            8% {
-              opacity: 0.38; /* elegant 38% opacity */
+            10% {
+              opacity: 0.12; /* highly discrete 12% opacity */
             }
             50% {
-              left: ${el.midX}%;
-              top: ${el.midY}%;
-              transform: translate(15px, -15px) rotate(${el.rot / 2}deg);
-              opacity: 0.38;
+              transform: translate3d(${el.driftX}px, ${el.driftY}px, 0) rotate(${el.rot / 2}deg);
+              opacity: 0.15;
             }
-            92% {
-              opacity: 0.38;
+            90% {
+              opacity: 0.12;
             }
             100% {
-              left: ${el.startX}%;
-              top: ${el.startY}%;
-              transform: translate(0, 0) rotate(${el.rot}deg);
+              transform: translate3d(0, 0, 0) rotate(${el.rot}deg);
               opacity: 0;
             }
           }
@@ -151,18 +141,18 @@ export default function AnimatedBackground() {
         `).join('\n')}
       `}</style>
 
-      {/* Modern Soft Drifting Pastel Background Orbs */}
+      {/* Modern Soft Drifting Pastel Background Orbs (with low opacity for a soft, elegant glow) */}
       <div 
-        className="absolute top-[10%] left-[5%] w-[300px] md:w-[500px] h-[300px] md:h-[500px] rounded-full bg-rose-200/20 blur-[90px] md:blur-[140px] animate-orb-1 pointer-events-none" 
+        className="absolute top-[10%] left-[5%] w-[300px] md:w-[500px] h-[300px] md:h-[500px] rounded-full bg-rose-200/10 blur-[90px] md:blur-[140px] animate-orb-1 pointer-events-none" 
       />
       <div 
-        className="absolute bottom-[15%] right-[10%] w-[350px] md:w-[550px] h-[350px] md:h-[550px] rounded-full bg-emerald-100/20 blur-[100px] md:blur-[150px] animate-orb-2 pointer-events-none" 
+        className="absolute bottom-[15%] right-[10%] w-[350px] md:w-[550px] h-[350px] md:h-[550px] rounded-full bg-emerald-100/10 blur-[100px] md:blur-[150px] animate-orb-2 pointer-events-none" 
       />
       <div 
-        className="absolute top-[50%] left-[45%] w-[250px] md:w-[450px] h-[250px] md:h-[450px] rounded-full bg-amber-100/20 blur-[90px] md:blur-[130px] animate-orb-3 pointer-events-none" 
+        className="absolute top-[50%] left-[45%] w-[250px] md:w-[450px] h-[250px] md:h-[450px] rounded-full bg-amber-100/10 blur-[90px] md:blur-[130px] animate-orb-3 pointer-events-none" 
       />
       <div 
-        className="absolute top-[3%] right-[20%] w-[250px] md:w-[400px] h-[250px] md:h-[400px] rounded-full bg-purple-100/18 blur-[80px] md:blur-[120px] animate-orb-1 pointer-events-none" 
+        className="absolute top-[3%] right-[20%] w-[250px] md:w-[400px] h-[250px] md:h-[400px] rounded-full bg-purple-100/10 blur-[80px] md:blur-[120px] animate-orb-1 pointer-events-none" 
       />
 
       {/* Elegant, Seamlessly Drifting Icons across all coordinates */}
@@ -171,9 +161,12 @@ export default function AnimatedBackground() {
           key={el.id}
           className={`absolute pointer-events-none select-none text-center transform-gpu particle-${el.id}`}
           style={{
+            left: `${el.startX}%`,
+            top: `${el.startY}%`,
             fontSize: `${el.size}px`,
-            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.02))',
-            willChange: 'left, top, transform, opacity',
+            // Low saturation and darkened grayscale filter converts colorful emojis to extremely soft, elegant, matching background symbols
+            filter: 'grayscale(0.95) brightness(0.4) contrast(1.1) drop-shadow(0 1px 2px rgba(0,0,0,0.01))',
+            willChange: 'transform, opacity',
           }}
         >
           {el.char}
