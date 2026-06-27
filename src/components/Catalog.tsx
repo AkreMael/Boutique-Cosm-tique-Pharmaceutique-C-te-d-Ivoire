@@ -158,10 +158,10 @@ export default function Catalog({
             <span className="text-[10px] uppercase font-mono tracking-wider font-extrabold text-zinc-400 mb-3 block">
               Sélectionner une catégorie :
             </span>
-            <div className="flex flex-wrap gap-2 overflow-x-auto pb-1">
+            <div className="flex flex-row flex-nowrap gap-2 overflow-x-auto pb-2 scrollbar-none">
               <button
                 onClick={() => setSelectedCategory('tous')}
-                className={`px-4.5 py-2.5 rounded-full text-xs font-bold transition ${
+                className={`shrink-0 whitespace-nowrap px-4.5 py-2.5 rounded-full text-xs font-bold transition ${
                   selectedCategory === 'tous'
                     ? 'bg-rose-900 text-white shadow-sm'
                     : 'bg-zinc-50 border border-zinc-150 text-zinc-700 hover:bg-zinc-100'
@@ -173,7 +173,7 @@ export default function Catalog({
                 <button
                   key={cat.slug}
                   onClick={() => setSelectedCategory(cat.slug)}
-                  className={`px-4 py-2 rounded-full text-xs font-bold transition flex items-center space-x-1.5 ${
+                  className={`shrink-0 whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold transition flex items-center space-x-1.5 ${
                     selectedCategory === cat.slug
                       ? 'bg-rose-900 text-white shadow-sm font-semibold'
                       : 'bg-zinc-50 border border-zinc-150 text-zinc-700 hover:bg-rose-50/50'
