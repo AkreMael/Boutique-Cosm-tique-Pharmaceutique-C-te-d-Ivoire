@@ -893,6 +893,8 @@ export default function App() {
                 products={products}
                 categories={categories}
                 onAddToCart={handleAddToCart}
+                onRemoveFromCart={handleRemoveFromCart}
+                cart={cart}
                 onSelectProductDetails={(product) => setSelectedProduct(product)}
                 onSwitchTab={(tab, arg) => {
                   if (tab === 'categories' && arg) {
@@ -917,6 +919,8 @@ export default function App() {
                 products={products}
                 categories={categories}
                 onAddToCart={handleAddToCart}
+                onRemoveFromCart={handleRemoveFromCart}
+                cart={cart}
                 onSelectProductDetails={(product) => setSelectedProduct(product)}
                 preselectedCategorySlug={preselectedCategory}
                 setPreselectedCategorySlug={setPreselectedCategory}
@@ -927,6 +931,8 @@ export default function App() {
               <OffersScreen
                 products={products}
                 onAddToCart={handleAddToCart}
+                onRemoveFromCart={handleRemoveFromCart}
+                cart={cart}
                 onSelectProductDetails={(product) => setSelectedProduct(product)}
                 onSwitchTab={(tab) => setActiveTab(tab)}
               />
@@ -963,6 +969,8 @@ export default function App() {
                 products={products}
                 categories={categories}
                 onAddToCart={handleAddToCart}
+                onRemoveFromCart={handleRemoveFromCart}
+                cart={cart}
                 onSelectProductDetails={(product) => setSelectedProduct(product)}
               />
             )}

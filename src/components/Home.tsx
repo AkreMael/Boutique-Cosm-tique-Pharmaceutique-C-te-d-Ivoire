@@ -6,6 +6,8 @@ interface HomeProps {
   products: Product[];
   categories: Category[];
   onAddToCart: (product: Product) => void;
+  onRemoveFromCart?: (productId: string) => void;
+  cart?: any[];
   onSelectProductDetails: (product: Product) => void;
   onSwitchTab: (tab: string, arg?: any) => void;
   currentSearchQuery: string;
@@ -127,6 +129,8 @@ export default function Home({
   products,
   categories,
   onAddToCart,
+  onRemoveFromCart,
+  cart,
   onSelectProductDetails,
   onSwitchTab,
   currentSearchQuery,
@@ -153,6 +157,17 @@ export default function Home({
     }, 5000);
     return () => clearInterval(timer);
   }, []);
+
+  const handleToggleCartItem = (product: Product) => {
+    const isInCart = cart ? cart.some((item: any) => item.product.id === product.id) : false;
+    if (isInCart) {
+      if (onRemoveFromCart) {
+        onRemoveFromCart(product.id);
+      }
+    } else {
+      onAddToCart(product);
+    }
+  };
 
   const handleAddToCartWithNotify = (product: Product) => {
     onAddToCart(product);
@@ -488,12 +503,16 @@ export default function Home({
                       </div>
 
                       <button
-                        onClick={() => handleAddToCartWithNotify(p)}
-                        className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition active:scale-90 cursor-pointer"
-                        title="Ajouter au panier"
+                        onClick={() => handleToggleCartItem(p)}
+                        className={`p-1.5 rounded-lg transition active:scale-90 cursor-pointer ${
+                          cart && cart.some((item: any) => item.product.id === p.id)
+                            ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                            : 'bg-rose-50 hover:bg-rose-100 text-rose-600'
+                        }`}
+                        title={cart && cart.some((item: any) => item.product.id === p.id) ? "Retirer du panier" : "Ajouter au panier"}
                       >
-                        {addedProductId === p.id ? (
-                          <Check className="h-3.5 w-3.5 text-emerald-600" />
+                        {cart && cart.some((item: any) => item.product.id === p.id) ? (
+                          <Check className="h-3.5 w-3.5 stroke-[3]" />
                         ) : (
                           <Plus className="h-3.5 w-3.5" />
                         )}
@@ -578,12 +597,16 @@ export default function Home({
                     </div>
 
                     <button
-                      onClick={() => handleAddToCartWithNotify(p)}
-                      className="px-3 py-2 bg-rose-50 hover:bg-rose-500 font-bold text-[10px] text-rose-600 hover:text-white rounded-xl transition active:scale-95 cursor-pointer flex items-center gap-1 shadow-xs"
+                      onClick={() => handleToggleCartItem(p)}
+                      className={`px-3 py-2 font-bold text-[10px] rounded-xl transition active:scale-95 cursor-pointer flex items-center gap-1 shadow-xs ${
+                        cart && cart.some((item: any) => item.product.id === p.id)
+                          ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                          : 'bg-rose-50 hover:bg-rose-500 text-rose-600 hover:text-white'
+                      }`}
                     >
-                      {addedProductId === p.id ? (
+                      {cart && cart.some((item: any) => item.product.id === p.id) ? (
                         <>
-                          <Check className="h-3 w-3 text-emerald-600" />
+                          <Check className="h-3 w-3 stroke-[3]" />
                           <span>Pris</span>
                         </>
                       ) : (

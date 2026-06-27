@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Search, Filter, ArrowUpDown, Plus, Check, Info, AlertTriangle, Sparkles, X } from 'lucide-react';
-import { Product, CategorySlug, Category } from '../types';
+import { Product, CategorySlug, Category, CartItem } from '../types';
 
 interface CatalogProps {
   products: Product[];
   categories: Category[];
   onAddToCart: (product: Product) => void;
+  onRemoveFromCart?: (productId: string) => void;
+  cart?: CartItem[];
   onSelectProductDetails: (product: Product) => void;
 }
 
@@ -13,6 +15,8 @@ export default function Catalog({
   products,
   categories,
   onAddToCart,
+  onRemoveFromCart,
+  cart,
   onSelectProductDetails
 }: CatalogProps) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -60,6 +64,24 @@ export default function Catalog({
     return 0; // default order based on index
   });
 
+  const handleToggleCartItem = (product: Product) => {
+    const isInCart = cart ? cart.some((item) => item.product.id === product.id) : false;
+    if (isInCart) {
+      if (onRemoveFromCart) {
+        onRemoveFromCart(product.id);
+      }
+    } else {
+      onAddToCart(product);
+    }
+  };
+
+  const handlePromoCardClick = () => {
+    setSelectedCategory('promotions');
+    setTimeout(() => {
+      document.getElementById('products-display-area')?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  };
+
   const handleAddToCartWithAnimation = (product: Product) => {
     onAddToCart(product);
     setAddedProductId(product.id);
@@ -72,8 +94,48 @@ export default function Catalog({
     <div id="product-catalog-section" className="py-8 bg-zinc-50 min-h-[calc(100vh-80px)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
+        {/* Brand Filter & Sort Dropdown placed above the Promotion banner */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+          {/* Brand Filter */}
+          <div className="relative">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-zinc-400 pointer-events-none">
+              <Filter className="h-4 w-4" />
+            </span>
+            <select
+              value={selectedBrand}
+              onChange={(e) => setSelectedBrand(e.target.value)}
+              className="w-full pl-9 pr-8 py-3.5 bg-white border border-zinc-200 rounded-2xl text-xs font-semibold text-zinc-700 appearance-none focus:outline-none focus:border-rose-300 transition shadow-xs"
+            >
+              <option value="toutes">Toutes les marques</option>
+              {brands.filter((b) => b !== 'toutes').map((brand) => (
+                <option key={brand} value={brand}>{brand}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Sort Dropdown */}
+          <div className="relative">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-zinc-400 pointer-events-none">
+              <ArrowUpDown className="h-4 w-4" />
+            </span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="w-full pl-9 pr-8 py-3.5 bg-white border border-zinc-200 rounded-2xl text-xs font-semibold text-zinc-700 appearance-none focus:outline-none focus:border-rose-300 transition shadow-xs"
+            >
+              <option value="default">Tri par défaut</option>
+              <option value="price-asc">Prix: Croissant</option>
+              <option value="price-desc">Prix: Décroissant</option>
+              <option value="recent">Nouveautés</option>
+            </select>
+          </div>
+        </div>
+
         {/* Banner principal promotionnel */}
-        <div className="mb-8 rounded-3xl bg-gradient-to-r from-rose-500 to-rose-700 p-8 text-white shadow-lg relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
+        <div 
+          onClick={handlePromoCardClick}
+          className="mb-8 rounded-3xl bg-gradient-to-r from-rose-500 to-rose-700 p-8 text-white shadow-lg relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6 cursor-pointer hover:shadow-xl transition duration-300"
+        >
           <div className="absolute top-0 right-0 h-40 w-40 rounded-full bg-rose-400 opacity-20 -mr-10 -mt-10"></div>
           <div className="absolute bottom-0 left-0 h-24 w-24 rounded-full bg-rose-400 opacity-10 -ml-5 -mb-5"></div>
           
@@ -90,7 +152,10 @@ export default function Catalog({
           </div>
 
           <button
-            onClick={() => setSelectedCategory('promotions')}
+            onClick={(e) => {
+              e.stopPropagation(); // Avoid triggering double click
+              handlePromoCardClick();
+            }}
             className="px-6 py-3.5 bg-white text-rose-950 font-bold text-xs rounded-xl hover:bg-rose-50 transition shadow-md whitespace-nowrap z-10 hover:-translate-y-0.5"
           >
             Découvrir les Offres
@@ -100,11 +165,11 @@ export default function Catalog({
         {/* Filters and Search Container */}
         <div className="bg-white rounded-3xl p-6 shadow-md shadow-zinc-100 border border-rose-50/50 mb-8 space-y-6">
           
-          {/* Main search and selectors on top */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Main search on top */}
+          <div className="w-full">
             
             {/* Search Box */}
-            <div className="relative md:col-span-2">
+            <div className="relative w-full">
               <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none">
                 <Search className="h-4.5 w-4.5 text-zinc-400" />
               </span>
@@ -115,40 +180,6 @@ export default function Catalog({
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:border-rose-300 focus:bg-white transition"
               />
-            </div>
-
-            {/* Brand Filter */}
-            <div className="relative">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-zinc-400">
-                <Filter className="h-4 w-4" />
-              </span>
-              <select
-                value={selectedBrand}
-                onChange={(e) => setSelectedBrand(e.target.value)}
-                className="w-full pl-9 pr-3 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-semibold text-zinc-700 appearance-none focus:outline-none focus:border-rose-300 focus:bg-white transition"
-              >
-                <option value="toutes">Toutes les marques</option>
-                {brands.filter((b) => b !== 'toutes').map((brand) => (
-                  <option key={brand} value={brand}>{brand}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Sort Dropdown */}
-            <div className="relative">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-zinc-400">
-                <ArrowUpDown className="h-4 w-4" />
-              </span>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                className="w-full pl-9 pr-3 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-semibold text-zinc-700 appearance-none focus:outline-none focus:border-rose-300 focus:bg-white transition"
-              >
-                <option value="default">Tri par défaut</option>
-                <option value="price-asc">Prix: Croissant</option>
-                <option value="price-desc">Prix: Décroissant</option>
-                <option value="recent">Nouveautés</option>
-              </select>
             </div>
 
           </div>
@@ -188,7 +219,7 @@ export default function Catalog({
         </div>
 
         {/* Results Counter */}
-        <div className="flex justify-between items-center mb-6">
+        <div id="products-display-area" className="flex justify-between items-center mb-6">
           <p className="text-xs text-zinc-500 font-mono">
             {filteredProducts.length} {filteredProducts.length > 1 ? 'articles trouvés' : 'article trouvé'}
           </p>
@@ -311,17 +342,17 @@ export default function Catalog({
                         </button>
                         
                         <button
-                          onClick={() => handleAddToCartWithAnimation(product)}
+                          onClick={() => handleToggleCartItem(product)}
                           disabled={isOutOfStock}
                           className={`px-3 py-2.5 rounded-xl text-xs font-bold flex items-center space-x-1 border shadow-xs transition-all pointer-events-auto cursor-pointer ${
                             isOutOfStock
                               ? 'bg-zinc-100 border-zinc-200 text-zinc-400 cursor-not-allowed'
-                              : addedProductId === product.id
+                              : cart && cart.some((item) => item.product.id === product.id)
                               ? 'bg-emerald-600 border-emerald-600 text-white'
                               : 'bg-rose-950 border-rose-950 text-white hover:bg-rose-900 active:scale-95'
                           }`}
                         >
-                          {addedProductId === product.id ? (
+                          {cart && cart.some((item) => item.product.id === product.id) ? (
                             <>
                               <Check className="h-4 w-4 stroke-[3]" />
                               <span>Ajouté !</span>

@@ -5,6 +5,8 @@ import { Product } from '../types';
 interface OffersScreenProps {
   products: Product[];
   onAddToCart: (product: Product) => void;
+  onRemoveFromCart?: (productId: string) => void;
+  cart?: any[];
   onSelectProductDetails: (product: Product) => void;
   onSwitchTab: (tab: string) => void;
 }
@@ -12,6 +14,8 @@ interface OffersScreenProps {
 export default function OffersScreen({
   products,
   onAddToCart,
+  onRemoveFromCart,
+  cart,
   onSelectProductDetails,
   onSwitchTab
 }: OffersScreenProps) {
@@ -20,13 +24,20 @@ export default function OffersScreen({
   // Filter products that have promotions active (has promoPrice)
   const promoProducts = products.filter((p) => p.promoPrice !== undefined && p.isAvailable);
 
-  const handleBuyNow = (product: Product) => {
-    onAddToCart(product);
-    setAddedProductId(product.id);
-    setTimeout(() => {
-      setAddedProductId(null);
-      onSwitchTab('cart'); // Go straight to Cart / Panier for fluid Jumia checkout
-    }, 450);
+  const handleToggleCartItem = (product: Product) => {
+    const isInCart = cart ? cart.some((item) => item.product.id === product.id) : false;
+    if (isInCart) {
+      if (onRemoveFromCart) {
+        onRemoveFromCart(product.id);
+      }
+    } else {
+      onAddToCart(product);
+      setAddedProductId(product.id);
+      setTimeout(() => {
+        setAddedProductId(null);
+        onSwitchTab('cart'); // Go straight to Cart / Panier
+      }, 450);
+    }
   };
 
   // Helper calculation to show percentage discount elegantly
@@ -127,13 +138,17 @@ export default function OffersScreen({
                     </div>
 
                     <button
-                      onClick={() => handleBuyNow(p)}
-                      className="px-4.5 py-3 bg-rose-500 text-white hover:bg-rose-600 font-black text-xs rounded-xl transition active:scale-95 shadow-md shadow-rose-100 flex items-center gap-1.5 cursor-pointer"
+                      onClick={() => handleToggleCartItem(p)}
+                      className={`px-4.5 py-3 font-black text-xs rounded-xl transition active:scale-95 shadow-md flex items-center gap-1.5 cursor-pointer ${
+                        cart && cart.some((item) => item.product.id === p.id)
+                          ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-100'
+                          : 'bg-rose-500 hover:bg-rose-600 text-white shadow-rose-100'
+                      }`}
                     >
-                      {addedProductId === p.id ? (
+                      {cart && cart.some((item) => item.product.id === p.id) ? (
                         <>
-                          <Check className="h-4 w-4" />
-                          <span>Choisi</span>
+                          <Check className="h-4 w-4 stroke-[3]" />
+                          <span>Choisi (Panier)</span>
                         </>
                       ) : (
                         <>
