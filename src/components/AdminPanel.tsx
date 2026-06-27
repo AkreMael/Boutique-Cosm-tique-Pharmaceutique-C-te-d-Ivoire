@@ -571,7 +571,7 @@ export default function AdminPanel({
   };
 
   return (
-    <div id="admin-backoffice-section" className="py-8 bg-zinc-50 min-h-[calc(100vh-80px)]">
+    <div id="admin-backoffice-section" className="py-8 bg-transparent min-h-[calc(100vh-80px)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Dashboard Header */}

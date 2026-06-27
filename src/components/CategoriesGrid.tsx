@@ -110,7 +110,7 @@ export default function CategoriesGrid({
   }
 
   return (
-    <div className="pb-24 bg-white font-sans animate-fade-in animate-duration-300">
+    <div className="pb-24 bg-transparent font-sans animate-fade-in animate-duration-300">
       
       {/* HEADER BAR */}
       <div className="bg-rose-50/15 py-6 border-b border-rose-50 px-4 md:px-8 max-w-7xl mx-auto">

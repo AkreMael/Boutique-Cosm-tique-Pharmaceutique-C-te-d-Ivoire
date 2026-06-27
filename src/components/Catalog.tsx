@@ -91,7 +91,7 @@ export default function Catalog({
   };
 
   return (
-    <div id="product-catalog-section" className="py-8 bg-zinc-50 min-h-[calc(100vh-80px)]">
+    <div id="product-catalog-section" className="py-8 bg-transparent min-h-[calc(100vh-80px)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Brand Filter & Sort Dropdown placed above the Promotion banner */}

@@ -262,7 +262,7 @@ export default function Home({
   };
 
   return (
-    <div id="home-view-container" className="pb-24 bg-white font-sans animate-fade-in animate-duration-300">
+    <div id="home-view-container" className="pb-24 bg-transparent font-sans animate-fade-in animate-duration-300">
       
       {/* 🚀 BANNER HERO & PROMOTIONS SLIDER */}
       <div className="px-4 py-4 md:px-8 mt-1 max-w-5xl mx-auto">

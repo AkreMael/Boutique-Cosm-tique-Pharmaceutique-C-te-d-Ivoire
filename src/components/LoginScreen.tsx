@@ -360,7 +360,7 @@ export default function LoginScreen({ onLogin, isModal = false }: LoginScreenPro
   }
 
   return (
-    <div id="auth-portal" className="min-h-screen bg-zinc-50 flex items-center justify-center p-4 selection:bg-rose-100 font-sans">
+    <div id="auth-portal" className="min-h-screen bg-[#fff0f2] flex items-center justify-center p-4 selection:bg-rose-100 font-sans">
       <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_bottom_right,#ffe4e6_0%,transparent_40%)] opacity-70 pointer-events-none"></div>
       {formContent}
     </div>

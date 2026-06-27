@@ -45,7 +45,7 @@ export default function ProfileScreen({
 
   if (!currentUser) {
     return (
-      <div className="min-h-screen pb-24 bg-gradient-to-tr from-white via-rose-50/15 to-rose-50/30 flex items-center justify-center p-4">
+      <div className="min-h-screen pb-24 bg-transparent flex items-center justify-center p-4">
         <div className="w-full max-w-md bg-white border border-rose-100 p-8 rounded-[2.5rem] shadow-xl text-center space-y-6 animate-scale-up">
           <div className="h-14 w-14 bg-rose-50 rounded-full flex items-center justify-center text-rose-500 mx-auto">
             <UserIcon className="h-6 w-6" />
@@ -63,7 +63,7 @@ export default function ProfileScreen({
   }
 
   return (
-    <div id="profile-container-content" className="pb-24 bg-white font-sans animate-fade-in animate-duration-300">
+    <div id="profile-container-content" className="pb-24 bg-transparent font-sans animate-fade-in animate-duration-300">
       
       {/* PROFILE HEADER CARD */}
       <div className="bg-rose-50/15 py-12 border-b border-rose-100/50 px-4 md:px-8 max-w-7xl mx-auto">

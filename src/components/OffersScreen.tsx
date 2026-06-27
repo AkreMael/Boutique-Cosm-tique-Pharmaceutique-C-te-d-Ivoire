@@ -48,7 +48,7 @@ export default function OffersScreen({
   };
 
   return (
-    <div id="offers-view-page" className="min-h-screen pb-24 bg-gradient-to-tr from-white via-rose-50/15 to-rose-50/35 font-sans animate-fade-in animate-duration-300">
+    <div id="offers-view-page" className="min-h-screen pb-24 bg-transparent font-sans animate-fade-in animate-duration-300">
       
       {/* HEADER SECTION */}
       <div className="bg-rose-50/20 py-8 border-b border-rose-100/50 px-4 md:px-8 max-w-7xl mx-auto text-center sm:text-left">

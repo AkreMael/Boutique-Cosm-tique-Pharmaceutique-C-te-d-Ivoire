@@ -12,6 +12,7 @@ import OffersScreen from './components/OffersScreen';
 import CartScreen from './components/CartScreen';
 import ProfileScreen from './components/ProfileScreen';
 import { Product, Category, User, CartItem, Order, ChatSession, ChatMessage, BeautyProfile } from './types';
+import AnimatedBackground from './components/AnimatedBackground';
 import { HeartPulse, Plus, Check, Star, X, Shield, Info, ShoppingBag, MessageSquare, Send, Sparkles, Home as HomeIcon, Grid3X3, BadgePercent, ShoppingCart as BottomCartIcon, User as UserIcon } from 'lucide-react';
 import { db, collection, doc, onSnapshot, setDoc, deleteDoc, query, where, authenticateAnonymous, handleFirestoreError, OperationType } from './lib/firebase';
 
@@ -842,7 +843,9 @@ export default function App() {
   const cartTotalCount = cart.reduce((count, item) => count + item.quantity, 0);
 
   return (
-    <div className="min-h-screen bg-zinc-50 flex flex-col font-sans relative selection:bg-rose-100">
+    <div className="min-h-screen bg-[#fff0f2] flex flex-col font-sans relative selection:bg-rose-100">
+      {/* Animated Background across the entire platform */}
+      <AnimatedBackground />
       
       {/* 1. HEADER */}
       <Header

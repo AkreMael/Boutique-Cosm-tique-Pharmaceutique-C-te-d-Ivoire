@@ -117,7 +117,7 @@ export default function PharmacistChat({
   };
 
   return (
-    <div id="beauty-advising-board" className="py-8 bg-zinc-50 min-h-[calc(100vh-80px)] flex flex-col justify-between">
+    <div id="beauty-advising-board" className="py-8 bg-transparent min-h-[calc(100vh-80px)] flex flex-col justify-between">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex-1 grid grid-cols-1 md:grid-cols-12 gap-8">
         
         {/* LEFT COLUMN: Chat list panel (Only visible for Admin role) */}

@@ -137,7 +137,7 @@ export default function BeautyQuestionnaire({
   const matchedRecs = getRecommendedProducts();
 
   return (
-    <div id="beauty-questionnaire-section" className="py-8 bg-zinc-50 min-h-[calc(100vh-80px)]">
+    <div id="beauty-questionnaire-section" className="py-8 bg-transparent min-h-[calc(100vh-80px)]">
       <div className="max-w-4xl mx-auto px-4">
         
         {/* Title */}
