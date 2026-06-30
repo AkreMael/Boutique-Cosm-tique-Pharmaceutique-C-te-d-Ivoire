@@ -250,7 +250,12 @@ export default function Catalog({
                 <div 
                   key={product.id}
                   id={`product-card-${product.id}`}
-                  className="bg-white rounded-2xl border border-rose-100 overflow-hidden shadow-sm hover:shadow-md transition flex flex-col group h-full"
+                  onClick={(e) => {
+                    const target = e.target as HTMLElement;
+                    if (target.closest('button') || target.closest('a')) return;
+                    onSelectProductDetails(product);
+                  }}
+                  className="bg-white rounded-2xl border border-rose-100 overflow-hidden shadow-sm hover:shadow-md hover:border-rose-200 transition flex flex-col group h-full cursor-pointer"
                 >
                   {/* Thumbnail Cover image */}
                   <div className="relative h-56 bg-zinc-100 overflow-hidden shrink-0 select-none">

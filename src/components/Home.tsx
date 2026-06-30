@@ -457,7 +457,12 @@ export default function Home({
               return (
                 <div
                   key={p.id}
-                  className="w-48 bg-white rounded-2xl border border-rose-100/50 p-3 shadow-xs shrink-0 snap-start hover:shadow-md transition flex flex-col justify-between"
+                  onClick={(e) => {
+                    const target = e.target as HTMLElement;
+                    if (target.closest('button') || target.closest('a')) return;
+                    onSelectProductDetails(p);
+                  }}
+                  className="w-48 bg-white rounded-2xl border border-rose-100/50 p-3 shadow-xs shrink-0 snap-start hover:shadow-md hover:border-rose-200 transition flex flex-col justify-between cursor-pointer"
                 >
                   <div 
                     onClick={() => onSelectProductDetails(p)}
@@ -540,7 +545,12 @@ export default function Home({
             return (
               <div
                 key={p.id}
-                className="bg-white rounded-2xl border border-zinc-150 p-3 h-full flex flex-col justify-between hover:shadow-md hover:border-rose-200 transition-all group"
+                onClick={(e) => {
+                  const target = e.target as HTMLElement;
+                  if (target.closest('button') || target.closest('a')) return;
+                  onSelectProductDetails(p);
+                }}
+                className="bg-white rounded-2xl border border-zinc-150 p-3 h-full flex flex-col justify-between hover:shadow-md hover:border-rose-200 transition-all group cursor-pointer"
               >
                 {/* Image layout */}
                 <div className="relative">

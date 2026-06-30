@@ -262,6 +262,11 @@ export default function App() {
     fetchCatalogOnce();
   }, []);
 
+  // Auto-close product drawer when switching tabs
+  useEffect(() => {
+    setSelectedProduct(null);
+  }, [activeTab]);
+
   // 2.2 Secure Server REST Polling for messages, orders, chats, and customers
   useEffect(() => {
     const fetchFullPlatformData = async () => {
@@ -446,11 +451,42 @@ export default function App() {
   };
 
   // Checkout complete orders
-  const handleOrderCreated = (newOrder: Order) => {
+  const handleOrderCreated = async (newOrder: Order) => {
     setOrders((prev) => [newOrder, ...prev]);
     handleClearCart();
     setSelectedProduct(null); // Return to standard view from ProductDetailSheet
     setActiveTab('profile');  // Automatically redirect to profile screen to view order and invoice
+
+    if (currentUser) {
+      const hasChanged = 
+        currentUser.phone !== newOrder.customerPhone ||
+        currentUser.city !== newOrder.city ||
+        currentUser.address !== newOrder.address;
+
+      if (hasChanged) {
+        const updatedUser: User = {
+          ...currentUser,
+          phone: newOrder.customerPhone,
+          city: newOrder.city,
+          address: newOrder.address || currentUser.address || ''
+        };
+        setCurrentUser(updatedUser);
+        localStorage.setItem('akwaba_user', JSON.stringify(updatedUser));
+
+        try {
+          if (isFirebaseAuthed) {
+            await setDoc(doc(db, "users", currentUser.id), updatedUser, { merge: true });
+          }
+          await fetch('/api/users/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updatedUser)
+          });
+        } catch (err) {
+          console.error("Failed to automatically update user profile on order confirmation:", err);
+        }
+      }
+    }
   };
 
   const handleDeleteOrder = async (orderId: string) => {
@@ -997,26 +1033,10 @@ export default function App() {
       )}
 
       {/* 2. CORE RENDERING ENGINE */}
-      <main className="flex-1">
+      <main className="flex-1 pb-20">
         {(!currentUser || currentUser.role === 'client' || adminViewMode === 'client') ? (
-          selectedProduct ? (
-            <ProductDetailSheet
-              product={selectedProduct}
-              allProducts={products}
-              currentUser={currentUser}
-              onAddToCart={handleAddToCart}
-              onOrderCreated={handleOrderCreated}
-              onClearCart={handleClearCart}
-              onClose={() => setSelectedProduct(null)}
-              onSelectProduct={setSelectedProduct}
-              onRequireLogin={() => {
-                setPendingAction(null);
-                setShowLoginModal(true);
-              }}
-            />
-          ) : (
-            <>
-              {activeTab === 'home' && (
+          <>
+            {activeTab === 'home' && (
               <Home
                 products={products}
                 categories={categories}
@@ -1150,7 +1170,6 @@ export default function App() {
               />
             )}
           </>
-          )
         ) : (
           currentUser && (
             <AdminPanel
@@ -1171,6 +1190,7 @@ export default function App() {
               onSelectProductDetails={(product) => setSelectedProduct(product)}
               onDeleteMessage={handleDeleteMessage}
               onDeleteChatSession={handleDeleteChatSession}
+              onDeleteOrder={handleDeleteOrder}
             />
           )
         )}
@@ -1194,6 +1214,26 @@ export default function App() {
           setShowLoginModal(true);
         }}
       />
+
+      {/* 3.1 PRODUCT DETAILS DRAWER OVERLAY */}
+      <AnimatePresence>
+        {selectedProduct && (!currentUser || currentUser.role === 'client' || adminViewMode === 'client') && (
+          <ProductDetailSheet
+            product={selectedProduct}
+            allProducts={products}
+            currentUser={currentUser}
+            onAddToCart={handleAddToCart}
+            onOrderCreated={handleOrderCreated}
+            onClearCart={handleClearCart}
+            onClose={() => setSelectedProduct(null)}
+            onSelectProduct={setSelectedProduct}
+            onRequireLogin={() => {
+              setPendingAction(null);
+              setShowLoginModal(true);
+            }}
+          />
+        )}
+      </AnimatePresence>
 
       {/* ======================================= */}
       {/* PORTAL: LOGIN ON-DEMAND MODAL OVERLAY  */}
@@ -1478,7 +1518,7 @@ export default function App() {
       {/* 🧭 STYLISH BOTTOM NAVIGATION BAR (ALWAYS VISIBLE AT THE BOTTOM OVERALL) */}
       <div 
         id="always-visible-bottom-navigation-bar" 
-        className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-rose-100 shadow-md py-3 px-6 flex justify-around items-center"
+        className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-rose-100 shadow-md py-3 px-6 flex justify-around items-center"
       >
         <button
           onClick={() => setActiveTab('home')}

@@ -190,17 +190,19 @@ export default function ProfileScreen({
                           {getStatusIcon(order.status)} {order.status}
                         </span>
 
-                        <button
-                          onClick={() => {
-                            if (window.confirm("Êtes-vous sûr de vouloir supprimer cette commande définitivement ?")) {
-                              onDeleteOrder(order.id);
-                            }
-                          }}
-                          className="p-1.5 hover:bg-red-50 text-zinc-400 hover:text-red-500 rounded-lg transition cursor-pointer"
-                          title="Supprimer la commande"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                        {order.status === 'Annulée' && (
+                          <button
+                            onClick={() => {
+                              if (window.confirm("Êtes-vous sûr de vouloir supprimer cette commande définitivement ?")) {
+                                onDeleteOrder(order.id);
+                              }
+                            }}
+                            className="p-1.5 hover:bg-red-50 text-zinc-400 hover:text-red-500 rounded-lg transition cursor-pointer"
+                            title="Supprimer la commande"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </div>
                     </div>
 

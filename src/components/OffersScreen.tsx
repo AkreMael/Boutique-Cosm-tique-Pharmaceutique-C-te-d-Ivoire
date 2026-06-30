@@ -78,7 +78,12 @@ export default function OffersScreen({
               return (
                 <div
                   key={p.id}
-                  className="bg-white rounded-[2rem] border border-rose-100/60 p-4 shadow-sm hover:shadow-md hover:border-rose-300 transition-all duration-300 flex flex-col justify-between group relative overflow-hidden"
+                  onClick={(e) => {
+                    const target = e.target as HTMLElement;
+                    if (target.closest('button') || target.closest('a')) return;
+                    onSelectProductDetails(p);
+                  }}
+                  className="bg-white rounded-[2rem] border border-rose-100/60 p-4 shadow-sm hover:shadow-md hover:border-rose-300 transition-all duration-300 flex flex-col justify-between group relative overflow-hidden cursor-pointer"
                 >
                   {/* Absolute Badge discount banner on corner */}
                   <div className="absolute top-0 right-0 h-16 w-16 bg-gradient-to-bl from-rose-500 to-pink-500 text-white flex items-center justify-center rounded-bl-[1.5rem] shadow-sm select-none">

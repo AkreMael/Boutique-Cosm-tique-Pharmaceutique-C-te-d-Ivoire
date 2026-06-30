@@ -73,6 +73,7 @@ interface AdminPanelProps {
   onSelectProductDetails?: (product: Product) => void;
   onDeleteMessage?: (messageId: string) => Promise<void>;
   onDeleteChatSession?: (chatId: string) => Promise<void>;
+  onDeleteOrder: (orderId: string) => Promise<void>;
 }
 
 export default function AdminPanel({
@@ -92,7 +93,8 @@ export default function AdminPanel({
   onAddToCart,
   onSelectProductDetails,
   onDeleteMessage,
-  onDeleteChatSession
+  onDeleteChatSession,
+  onDeleteOrder
 }: AdminPanelProps) {
   const [adminTab, setAdminTab] = useState<'stats' | 'orders' | 'products' | 'promos' | 'categories' | 'messages' | 'modules' | 'items' | 'users' | 'logs'>('stats');
   const [stats, setStats] = useState<AdminStats | null>(null);
@@ -893,6 +895,19 @@ export default function AdminPanel({
                                 ✓ Livrée & Clôturée
                               </span>
                             )}
+                            
+                            <button
+                              onClick={async () => {
+                                if (window.confirm("Êtes-vous sûr de vouloir supprimer définitivement cette commande ? Elle disparaîtra immédiatement de l'administration et du profil de l'utilisateur.")) {
+                                  await onDeleteOrder(ord.id);
+                                }
+                              }}
+                              className="px-2 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg font-black text-[10px] uppercase transition flex items-center gap-1 cursor-pointer border border-red-200 shadow-xs ml-2"
+                              title="Supprimer la commande"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                              <span>Supprimer</span>
+                            </button>
                           </div>
                         </td>
                       </tr>

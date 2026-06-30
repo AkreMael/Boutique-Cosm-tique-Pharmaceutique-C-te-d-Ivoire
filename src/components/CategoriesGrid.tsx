@@ -208,7 +208,12 @@ export default function CategoriesGrid({
                 return (
                   <div 
                     key={p.id}
-                    className="bg-white rounded-2xl border border-zinc-150 p-2 flex flex-col justify-between h-full hover:border-rose-250 transition-colors"
+                    onClick={(e) => {
+                      const target = e.target as HTMLElement;
+                      if (target.closest('button') || target.closest('a')) return;
+                      onSelectProductDetails(p);
+                    }}
+                    className="bg-white rounded-2xl border border-zinc-150 p-2 flex flex-col justify-between h-full hover:border-rose-250 transition-colors cursor-pointer"
                   >
                     <div 
                       onClick={() => onSelectProductDetails(p)}
@@ -355,7 +360,12 @@ export default function CategoriesGrid({
                 return (
                   <div
                     key={p.id}
-                    className="bg-white rounded-2xl border border-zinc-150 p-3 h-full flex flex-col justify-between hover:shadow-md hover:border-rose-250 transition-all duration-300 group"
+                    onClick={(e) => {
+                      const target = e.target as HTMLElement;
+                      if (target.closest('button') || target.closest('a')) return;
+                      onSelectProductDetails(p);
+                    }}
+                    className="bg-white rounded-2xl border border-zinc-150 p-3 h-full flex flex-col justify-between hover:shadow-md hover:border-rose-250 transition-all duration-300 group cursor-pointer"
                   >
                     <div className="relative">
                       <div 
