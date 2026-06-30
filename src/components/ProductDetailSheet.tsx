@@ -78,7 +78,9 @@ export default function ProductDetailSheet({
     if (userId !== prevUserIdRef.current) {
       prevUserIdRef.current = userId;
       if (currentUser) {
-        setPhone(currentUser.phone || '');
+        const rawPhone = currentUser.phone || '';
+        const stripped = rawPhone.startsWith('+225') ? rawPhone.slice(4).replace(/\s+/g, '') : rawPhone.replace(/\s+/g, '');
+        setPhone(stripped);
         setCity(currentUser.city || '');
         setAddress(currentUser.address || '');
       }
@@ -120,8 +122,9 @@ export default function ProductDetailSheet({
       return;
     }
 
-    if (!phone.trim()) {
-      setFormError('Le numéro de téléphone est requis pour valider votre commande.');
+    const cleanDigits = phone.replace(/[^\d]/g, '');
+    if (cleanDigits.length !== 10) {
+      setFormError('Le numéro de téléphone doit comporter exactement 10 chiffres (ex: 0707070707).');
       return;
     }
 
@@ -138,6 +141,7 @@ export default function ProductDetailSheet({
     setOrderLoading(true);
     setFormError('');
 
+    const finalPhone = `+225${cleanDigits}`;
     const orderId = `cmd-${Math.floor(10000 + Math.random() * 90000)}`;
     
     // Conforms with type `Order`
@@ -145,7 +149,7 @@ export default function ProductDetailSheet({
       id: orderId,
       userId: currentUser.id,
       customerName: currentUser.name,
-      customerPhone: phone.trim(),
+      customerPhone: finalPhone,
       customerEmail: currentUser.email || `${currentUser.id}@omii.ci`,
       address: address.trim(),
       city: city.trim(),
@@ -387,19 +391,28 @@ export default function ProductDetailSheet({
                               </div>
                             </div>
 
-                            {/* 2. Phone field (Editable) */}
+                            {/* 2. Phone field (Editable with visual +225 badge) */}
                             <div className="space-y-1">
                               <label className="text-[10px] font-bold uppercase tracking-wide text-rose-950 flex items-center gap-1">
                                 <Phone className="h-3 w-3 text-rose-700" />
                                 Numéro de Téléphone *
                               </label>
-                              <input 
-                                type="tel"
-                                placeholder="Ex: 0707080910"
-                                value={phone}
-                                onChange={(e) => setPhone(e.target.value)}
-                                className="w-full px-4 py-2.5 bg-white border border-rose-100 rounded-xl focus:outline-hidden focus:border-rose-400 text-zinc-700 font-medium placeholder-zinc-300"
-                              />
+                              <div className="flex rounded-xl border border-rose-100 bg-white overflow-hidden focus-within:border-rose-400 focus-within:ring-1 focus-within:ring-rose-400 transition">
+                                <span className="flex items-center px-3 bg-rose-50 border-r border-rose-100 text-rose-800 font-bold text-xs select-none font-mono">
+                                  +225
+                                </span>
+                                <input 
+                                  type="tel"
+                                  placeholder="Ex: 0707080910"
+                                  value={phone}
+                                  onChange={(e) => {
+                                    const clean = e.target.value.replace(/[^\d]/g, '').slice(0, 10);
+                                    setPhone(clean);
+                                  }}
+                                  className="w-full px-4 py-2.5 bg-transparent text-zinc-700 font-mono font-bold text-xs focus:outline-none placeholder-zinc-300"
+                                />
+                              </div>
+                              <span className="text-[9px] text-zinc-400 font-mono block mt-0.5 font-normal">Saisissez uniquement les 10 chiffres après l'indicatif +225.</span>
                             </div>
                           </div>
 

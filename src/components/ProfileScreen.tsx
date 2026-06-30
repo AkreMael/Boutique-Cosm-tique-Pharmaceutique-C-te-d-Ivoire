@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User as UserIcon, MapPin, Phone, History, LogOut, ClipboardList, Shield, RefreshCw, CheckCircle, Package, Truck, Calendar } from 'lucide-react';
+import { User as UserIcon, MapPin, Phone, History, LogOut, ClipboardList, Shield, RefreshCw, CheckCircle, Package, Truck, Calendar, Trash2 } from 'lucide-react';
 import { User as AppUser, Order } from '../types';
 import LoginScreen from './LoginScreen';
 
@@ -9,6 +9,7 @@ interface ProfileScreenProps {
   onLogin: (user: AppUser) => void;
   onLogout: () => void;
   onSwitchTab: (tab: string) => void;
+  onDeleteOrder: (orderId: string) => Promise<void>;
 }
 
 export default function ProfileScreen({
@@ -16,7 +17,8 @@ export default function ProfileScreen({
   orders,
   onLogin,
   onLogout,
-  onSwitchTab
+  onSwitchTab,
+  onDeleteOrder
 }: ProfileScreenProps) {
   // Unpack or filter orders specific to this logged in client
   const myOrders = orders.filter((o) => o.userId === currentUser?.id);
@@ -187,6 +189,18 @@ export default function ProfileScreen({
                         <span className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${getStatusColor(order.status)}`}>
                           {getStatusIcon(order.status)} {order.status}
                         </span>
+
+                        <button
+                          onClick={() => {
+                            if (window.confirm("Êtes-vous sûr de vouloir supprimer cette commande définitivement ?")) {
+                              onDeleteOrder(order.id);
+                            }
+                          }}
+                          className="p-1.5 hover:bg-red-50 text-zinc-400 hover:text-red-500 rounded-lg transition cursor-pointer"
+                          title="Supprimer la commande"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
                       </div>
                     </div>
 

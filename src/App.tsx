@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import Header from './components/Header';
 import Catalog from './components/Catalog';
 import BeautyQuestionnaire from './components/BeautyQuestionnaire';
@@ -26,6 +27,7 @@ export default function App() {
   // Authentication & Loading States
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
   const [pendingAction, setPendingAction] = useState<
     | { type: 'add_to_cart'; product: Product }
@@ -114,6 +116,25 @@ export default function App() {
       setActiveTab('catalog');
     }
     setLoading(false);
+  }, []);
+
+  // Handle background data readiness splash screen dismissal
+  useEffect(() => {
+    // Dismiss when products and categories are loaded, ensuring minimum reading display of 1.5s
+    if (products.length > 0 && categories.length > 0) {
+      const timer = setTimeout(() => {
+        setIsInitialLoading(false);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [products.length, categories.length]);
+
+  // Safety/fallback timeout so the app never hangs indefinitely
+  useEffect(() => {
+    const safetyTimer = setTimeout(() => {
+      setIsInitialLoading(false);
+    }, 4000);
+    return () => clearTimeout(safetyTimer);
   }, []);
 
   // 2. Real-Time Cloud Firestore Continuous Subscriptions (Public & Authenticated Collections)
@@ -430,6 +451,26 @@ export default function App() {
     handleClearCart();
     setSelectedProduct(null); // Return to standard view from ProductDetailSheet
     setActiveTab('profile');  // Automatically redirect to profile screen to view order and invoice
+  };
+
+  const handleDeleteOrder = async (orderId: string) => {
+    try {
+      // 1. Delete from Firestore SDK
+      if (isFirebaseAuthed) {
+        const orderRef = doc(db, "orders", orderId);
+        await deleteDoc(orderRef);
+      }
+
+      // 2. Delete from server-side database as well
+      await fetch(`/api/orders/${orderId}`, {
+        method: 'DELETE'
+      });
+
+      // 3. Update local state
+      setOrders((prev) => prev.filter((o) => o.id !== orderId));
+    } catch (err) {
+      console.error("Error deleting order:", err);
+    }
   };
 
   // Beauty profile customized routine diagnostic saving
@@ -832,20 +873,89 @@ export default function App() {
         });
       }
     }
-  };  // Loading spinner view
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-rose-50/20 flex flex-col items-center justify-center font-sans">
-        <div className="h-12 w-12 rounded-full border-4 border-rose-500 border-t-transparent animate-spin"></div>
-        <p className="text-xs font-mono text-rose-950 mt-4 tracking-widest uppercase">Omi'i Institut • Chargement...</p>
-      </div>
-    );
-  }
+  };
 
+  const showSplash = loading || isInitialLoading;
   const cartTotalCount = cart.reduce((count, item) => count + item.quantity, 0);
 
   return (
     <div className="min-h-screen bg-[#fff0f2] flex flex-col font-sans relative selection:bg-rose-100">
+      {/* 0. BRAND LUXURY SPLASH SCREEN */}
+      <AnimatePresence>
+        {showSplash && (
+          <motion.div
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.6, ease: "easeInOut" }}
+            className="fixed inset-0 z-[9999] bg-white flex flex-col items-center justify-center p-6 text-center"
+          >
+            <div className="absolute inset-0 bg-gradient-to-tr from-rose-50/50 via-white to-pink-50/30 -z-10" />
+            
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.2, duration: 0.8 }}
+              className="max-w-md space-y-8"
+            >
+              <div className="relative h-40 w-40 mx-auto rounded-full bg-gradient-to-tr from-rose-100 to-pink-50 flex items-center justify-center shadow-lg shadow-rose-100/40">
+                <motion.img
+                  animate={{ 
+                    scale: [1, 1.05, 1],
+                  }}
+                  transition={{ 
+                    duration: 3, 
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                  referrerPolicy="no-referrer"
+                  src="https://i.supaimg.com/0543a7e5-673b-44b9-9668-8152c5aea01b/28232fd8-ce18-4f8a-bb58-4e684a6feb11.png"
+                  alt="Omi'i Institut"
+                  className="h-32 w-32 object-contain"
+                />
+                <div className="absolute inset-0 rounded-full border border-rose-200/50 animate-ping opacity-25" style={{ animationDuration: '3s' }} />
+              </div>
+
+              <div className="space-y-3">
+                <motion.h1 
+                  initial={{ y: 15, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                  className="text-3xl font-black tracking-tight text-rose-950 font-sans"
+                >
+                  Omi'i Institut
+                </motion.h1>
+                <motion.p 
+                  initial={{ y: 15, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                  className="text-xs uppercase tracking-widest text-rose-600 font-extrabold font-mono"
+                >
+                  Boutique Cosmétique & Soins Premium
+                </motion.p>
+              </div>
+
+              <div className="space-y-2 pt-4">
+                <div className="h-1 w-48 bg-rose-100 rounded-full mx-auto overflow-hidden">
+                  <motion.div 
+                    animate={{ 
+                      x: [-192, 192] 
+                    }}
+                    transition={{ 
+                      duration: 1.5, 
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                    className="h-full w-full bg-gradient-to-r from-rose-400 to-pink-600 rounded-full"
+                  />
+                </div>
+                <p className="text-[10px] text-zinc-400 font-mono font-medium tracking-wide">
+                  Chargement de votre rituel de beauté ivoirien...
+                </p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* 1. HEADER */}
       <Header
         currentUser={currentUser}
@@ -979,6 +1089,7 @@ export default function App() {
                 onLogin={handleLogin}
                 onLogout={handleLogout}
                 onSwitchTab={(tab) => setActiveTab(tab)}
+                onDeleteOrder={handleDeleteOrder}
               />
             )}
 

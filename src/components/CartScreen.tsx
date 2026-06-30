@@ -101,7 +101,9 @@ export default function CartScreen({
       if (currentUser.id !== lastUserIdRef.current) {
         lastUserIdRef.current = currentUser.id;
         setCustomerName(currentUser.name || '');
-        setPhone(currentUser.phone || '');
+        const rawPhone = currentUser.phone || '';
+        const stripped = rawPhone.startsWith('+225') ? rawPhone.slice(4).replace(/\s+/g, '') : rawPhone.replace(/\s+/g, '');
+        setPhone(stripped);
         setCity(currentUser.city || '');
         setCityInput(currentUser.city || '');
         setAddress(currentUser.address || '');
@@ -151,19 +153,27 @@ export default function CartScreen({
       return;
     }
 
-    if (!phone || !city || !address) {
+    const cleanPhone = phone.replace(/[^\d]/g, '');
+    if (cleanPhone.length !== 10) {
+      alert("Format de numéro incorrect. Le numéro de téléphone de livraison doit être de 10 chiffres (ex: 0707070707).");
+      setLoading(false);
+      return;
+    }
+
+    if (!city || !address) {
       alert("Veuillez remplir toutes les informations d'expédition obligatoires.");
       return;
     }
 
     setLoading(true);
 
+    const finalPhone = `+225${cleanPhone}`;
     const orderId = `cmd-${Math.floor(10000 + Math.random() * 90000)}`;
     const orderPayload = {
       id: orderId,
       userId: currentUser.id,
       customerName: customerName || currentUser.name,
-      customerPhone: phone,
+      customerPhone: finalPhone,
       customerEmail: email || `${currentUser.id}@omii.ci`,
       address,
       city,
@@ -448,19 +458,23 @@ export default function CartScreen({
                       <label className="text-[10px] uppercase font-mono tracking-wider font-bold text-zinc-500 block">
                         Téléphone obligatoirement joignable <span className="text-red-500">*</span>
                       </label>
-                      <div className="relative">
-                        <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-rose-500">
-                          <Phone className="h-4 w-4" />
+                      <div className="flex rounded-xl border border-zinc-200 bg-zinc-50 overflow-hidden focus-within:border-rose-300 focus-within:bg-white transition">
+                        <span className="flex items-center px-3.5 bg-rose-50 border-r border-zinc-200 text-rose-800 font-bold text-xs select-none font-mono">
+                          +225
                         </span>
                         <input
                           type="tel"
                           required
-                          placeholder="Ex: +225 07 05 98 ..."
+                          placeholder="Ex: 0707070707"
                           value={phone}
-                          onChange={(e) => setPhone(e.target.value)}
-                          className="w-full pl-9.5 pr-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-mono font-bold focus:outline-none focus:border-rose-300 focus:bg-white text-zinc-800"
+                          onChange={(e) => {
+                            const clean = e.target.value.replace(/[^\d]/g, '').slice(0, 10);
+                            setPhone(clean);
+                          }}
+                          className="w-full px-4 py-2.5 bg-transparent text-xs font-mono font-bold focus:outline-none text-zinc-800"
                         />
                       </div>
+                      <span className="text-[9px] text-zinc-400 font-mono block mt-0.5 font-normal">Saisissez uniquement les 10 chiffres après l'indicatif +225.</span>
                     </div>
                   </div>
 

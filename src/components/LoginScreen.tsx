@@ -24,25 +24,27 @@ export default function LoginScreen({ onLogin, isModal = false }: LoginScreenPro
   const [adminPhone, setAdminPhone] = useState('');
 
   const formatPhoneNumber = (value: string) => {
-    // Only allow plus, space, and numbers
-    const clean = value.replace(/[^\d+ ]/g, '');
-    return clean;
+    // Only allow digits and limit to 10
+    const clean = value.replace(/[^\d]/g, '');
+    return clean.slice(0, 10);
   };
 
   const handleClientSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    if (!clientName.trim() || !clientCity.trim() || !clientPhone.trim()) {
+    const normalName = clientName.trim().toLowerCase();
+    const normalCity = clientCity.trim().toLowerCase();
+    const cleanDigits = clientPhone.replace(/[^\d]/g, '');
+
+    if (!clientName.trim() || !clientCity.trim() || !cleanDigits) {
       setError("Veuillez remplir tous les champs.");
       return;
     }
 
     // Checking if it matches administrator!
     // Exact Admin credentials: Nom: Maël, Ville: Cocody, Numéro: 07 05 05 26 32
-    const normalName = clientName.trim().toLowerCase();
-    const normalCity = clientCity.trim().toLowerCase();
-    const normalNum = clientPhone.replace(/\+225/g, '').replace(/\s+/g, ''); // strip prefix +225 and spaces
+    const normalNum = cleanDigits;
 
     const targetNum = "0705052632";
 
@@ -69,20 +71,13 @@ export default function LoginScreen({ onLogin, isModal = false }: LoginScreenPro
       }
 
       // Normal client phone checks
-      const digitsOnly = clientPhone.replace(/\+225/g, '').replace(/\s+/g, '');
-      if (digitsOnly.length !== 10 || isNaN(Number(digitsOnly))) {
-        setError("Format incorrect. Le numéro de téléphone doit être de 10 chiffres (ex: +225 0700000000).");
+      if (cleanDigits.length !== 10) {
+        setError("Format incorrect. Le numéro de téléphone doit être de 10 chiffres (ex: 07 00 00 00 00).");
         setLoading(false);
         return;
       }
 
-      if (!clientPhone.startsWith('+225')) {
-        setError("L'indicatif +225 de la Côte d'Ivoire est obligatoire.");
-        setLoading(false);
-        return;
-      }
-
-      const normalizedPhone = `+225${digitsOnly}`;
+      const normalizedPhone = `+225${cleanDigits}`;
 
       // Dynamically derive username under-the-hood to match the exact 3 fields specified
       const derivedUsername = clientName.trim().toLowerCase().replace(/[^a-z0-9]/g, '') + Math.floor(100 + Math.random() * 900);
@@ -242,20 +237,20 @@ export default function LoginScreen({ onLogin, isModal = false }: LoginScreenPro
 
           <div className="space-y-1">
             <label className="block text-zinc-650 text-xs font-bold font-sans">Numéro de téléphone CI *</label>
-            <div className="relative">
-              <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-zinc-400">
-                <Smartphone className="h-4 w-4" />
+            <div className="flex rounded-xl border border-zinc-200 bg-zinc-50 overflow-hidden focus-within:border-rose-400 focus-within:bg-white transition">
+              <span className="flex items-center px-3.5 bg-rose-50 border-r border-zinc-200 text-rose-800 font-bold text-xs select-none">
+                +225
               </span>
               <input
                 type="text"
                 required
-                placeholder="+225 0700000000"
+                placeholder="ex: 0707070707"
                 value={clientPhone}
                 onChange={(e) => setClientPhone(formatPhoneNumber(e.target.value))}
-                className="w-full pl-10 pr-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs text-zinc-700 focus:outline-none focus:border-rose-400 focus:bg-white transition font-mono"
+                className="w-full px-4 py-3 bg-transparent text-xs text-zinc-700 focus:outline-none font-mono"
               />
             </div>
-            <span className="text-[10px] text-zinc-400 font-mono block mt-1">Format obligatoire: +225 suivi de 10 chiffres. Graceful verification active.</span>
+            <span className="text-[10px] text-zinc-400 font-mono block mt-1">Saisissez uniquement les 10 chiffres après l'indicatif +225.</span>
           </div>
 
           <button

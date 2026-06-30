@@ -37,7 +37,9 @@ export default function Cart({
   // Synchronise phone number on login
   React.useEffect(() => {
     if (currentUser) {
-      setPhone(currentUser.phone || '');
+      const rawPhone = currentUser.phone || '';
+      const stripped = rawPhone.startsWith('+225') ? rawPhone.slice(4).replace(/\s+/g, '') : rawPhone.replace(/\s+/g, '');
+      setPhone(stripped);
     }
   }, [currentUser]);
 
@@ -77,10 +79,13 @@ export default function Cart({
     
     setLoading(true);
 
+    const cleanPhone = phone.replace(/[^\d]/g, '');
+    const finalPhone = `+225${cleanPhone}`;
+
     const orderPayload = {
       userId: currentUser?.id || 'guest',
       customerName: currentUser?.name || 'Client de passage',
-      customerPhone: phone,
+      customerPhone: finalPhone,
       customerEmail: currentUser?.email || 'guest@cosmetiques.ci',
       address,
       city,
@@ -114,7 +119,7 @@ export default function Cart({
         id: `cmd-${Math.floor(1000 + Math.random() * 9000)}`,
         userId: currentUser?.id || 'guest',
         customerName: currentUser?.name || 'Client de passage',
-        customerPhone: phone,
+        customerPhone: finalPhone,
         customerEmail: currentUser?.email || 'guest@cosmetiques.ci',
         address,
         city,
@@ -292,14 +297,23 @@ export default function Cart({
 
                 {/* Telephone */}
                 <div>
-                  <label className="block text-xs font-bold text-rose-950 mb-1.5">Téléphone d'expédition (sans indicatif) *</label>
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="Expl: 0707070707"
-                    className="w-full p-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs text-zinc-700 focus:outline-none focus:border-rose-300"
-                  />
+                  <label className="block text-xs font-bold text-rose-950 mb-1.5">Téléphone d'expédition *</label>
+                  <div className="flex rounded-xl border border-zinc-200 bg-zinc-50 overflow-hidden focus-within:border-rose-300 focus-within:bg-white transition">
+                    <span className="flex items-center px-3.5 bg-rose-50 border-r border-zinc-200 text-rose-800 font-bold text-xs select-none font-mono">
+                      +225
+                    </span>
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => {
+                        const clean = e.target.value.replace(/[^\d]/g, '').slice(0, 10);
+                        setPhone(clean);
+                      }}
+                      placeholder="ex: 0707070707"
+                      className="w-full p-3 bg-transparent text-xs text-zinc-700 focus:outline-none font-mono font-bold"
+                    />
+                  </div>
+                  <span className="text-[10px] text-zinc-400 font-mono block mt-1">Saisissez uniquement les 10 chiffres après l'indicatif +225.</span>
                 </div>
               </div>
             )}

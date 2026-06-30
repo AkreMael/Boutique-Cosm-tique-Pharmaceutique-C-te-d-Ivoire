@@ -1326,6 +1326,16 @@ app.put("/api/orders/:id/status", async (req, res) => {
   }
 });
 
+app.delete("/api/orders/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    await adminDb.collection("orders").doc(id).delete();
+    res.json({ message: "Commande supprimée avec succès" });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
 // 7. Admin Dashboard Statistics Calculation
 app.get("/api/admin/statistics", async (req, res) => {
   try {
